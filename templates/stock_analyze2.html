@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>วิเคราะห์แนวโน้มราคาหุ้น</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- ใช้จาก jsDelivr ซึ่งอัปเดตอัตโนมัติ -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles_tradingview.css') }}">
+    <script src="{{ url_for('static', filename='tradingview-chart.js') }}"></script>
+</head>
+<body>
+
+    <div id="app-wrapper">
+        <header class="chart-header">
+            
+            <div class="selection-bar">
+                <form id="stockAnalysisForm" onsubmit="analyzeStock(event)">
+                    <select id="symbol" required>
+                        <option disabled selected>Loading...</option>
+                    </select>
+                    <button type="submit" style="background-color:cadetblue; color: #c6ef23;">Load</button>
+                </form>
+            </div>
+            <div class="chart-controls">                
+                <div id="ema-controls" style="position: absolute; top: 60px; left: 0px; padding: 2px; border: 1px solid #ddd; z-index: 100; display: flex; align-items: center; gap: 5px;">
+                    <!-- ส่วนแสดงข้อมูล EMA -->
+                    <div id="ema-info" style="display: flex; gap: 5px;">
+                        <div style="color: #1E90FF; min-width: 100px;"><b>EMA 5</b>: <span id="ema5-value">-</span></div>
+                        <div style="color: #FF8C00; min-width: 100px;"><b>EMA 20</b>: <span id="ema20-value">-</span></div>
+                        <div style="color: #ffffff; min-width: 60px;"><b>O</b>: <span id="open-value">-</span></div>
+                        <div style="color: #ffffff; min-width: 60px;"><b>H</b>: <span id="high-value">-</span></div>
+                        <div style="color: #ffffff; min-width: 60px;"><b>L</b>: <span id="low-value">-</span></div>
+                        <div style="color: #ffffff; min-width: 60px;"><b>C</b>: <span id="close-value">-</span></div>
+                        <div style="color: #f2eb18; min-width: 100px;"><b>V</b>: <span id="volume-value">-</span></div>
+                        <div style="color: #f2eb18; min-width: 100px;"><b>VA</b>: <span id="volume-ma-value">-</span></div>
+                    </div>        
+                    <!-- ปุ่ม Toggle EMA -->
+                    <button id="toggle-ema-btn" onclick="toggleEMA()" style="padding: 2px 2px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                        Hide
+                    </button>
+                </div>
+            </div>
+
+            <div class="control-group" >            
+                <!-- ปุ่ม Timeframe -->
+                <div class="control-section timeframe-controls">
+                    <button class="timeframe-btn" onclick="changeTimeframe('15m')">15m</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe('1h')">1h</button>
+                    <button class="timeframe-btn active" onclick="changeTimeframe('D')">D</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe('W')">W</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe('M')">M</button>
+                </div>
+                
+                <!-- ปุ่มควบคุมกราฟ -->
+                <div class="control-section">
+                    <button class="control-btn active" id="zoom-btn" title="Zoom Mode">Zoom</button>
+                    <button class="control-btn" id="pan-btn" title="Pan Mode">Pan</button>
+                    <button class="control-btn" onclick="resetChart()" title="Reset">Reset</button>
+                    <button class="control-btn" id="fullscreen-btn" title="Toggle Fullscreen">
+                        <i class="fas fa-expand"></i> Fullscreen
+                    </button>
+                </div>
+                <div class="theme-controls">
+                    <button id="light-theme-btn" class="theme-btn active">Light</button>
+                    <button id="dark-theme-btn" class="theme-btn">Dark</button>
+                </div>
+            </div>
+        </header>
+        <div id="chart-container" style="display: flex; flex-direction: column; height: 100%; gap: 0;">
+            <div id="chart" style="flex: 1; min-height: 300px;"></div>
+            <div id="volume-chart" style="flex: 1; min-height: 100px;"></div>
+            <div id="volume-profile-container" style="width: 0px; height: 0%; float: right;"></div>
+            <div id="drag-overlay"></div>
+        </div>
+    </div>
+
+
+    <!-- เพิ่มส่วนแสดงผลลัพธ์ -->
+    <div id="analysisResults" class="analysis-results" style="display: none;">
+        <h3>ผลการวิเคราะห์ <span id="result-ticker"></span></h3>
+        <div class="result-item">
+            <span class="label">ราคาปัจจุบัน:</span>
+            <span id="result-price" class="value"></span>
+        </div>
+        <div class="result-item">
+            <span class="label">แนวโน้ม:</span>
+            <span id="result-trend" class="value"></span>
+        </div>
+        <div class="result-item">
+            <span class="label">คะแนนแนวโน้มขาขึ้น:</span>
+            <span id="result-bullish-score" class="value"></span>
+        </div>
+        <div class="result-item">
+            <span class="label">ระดับราคา:</span>
+            <span id="result-price-zone" class="value"></span>
+        </div>
+        <div class="result-item">
+            <span class="label">ปริมาณซื้อขาย:</span>
+            <span id="result-volume" class="value"></span>
+        </div>
+        <div class="result-item">
+            <span class="label">สรุป:</span>
+            <span id="result-analysis" class="value"></span>
+        </div>
+    </div>
+
+    <div id="result" class="mt-3 alert" style="display: none;">
+        <img id="chart6" src="" style="max-width:100%;" />
+        <img id="chart7" src="" style="max-width:100%;" />
+    </div>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+    async function loadSet100Symbols() {
+        const defaultTicker = "{{ ticker }}";
+        const response = await fetch("/get_set100");
+        const set100 = await response.json();
+
+        const symbolSelect = document.getElementById("symbol");
+        symbolSelect.innerHTML = ''; // ล้าง option เก่า
+
+        set100.forEach(symbol => {
+            const option = document.createElement("option");
+            option.value = symbol;
+            option.textContent = symbol;
+            symbolSelect.appendChild(option);
+        });
+
+        // ตั้งค่า default เป็น "PTT" ถ้ามี
+        //symbolSelect.value = "PTT";
+        if (set100.includes(defaultTicker)) {
+            symbolSelect.value = defaultTicker;
+        } else {
+            symbolSelect.value = set100[0]; // fallback ถ้าไม่มี
+        }
+        loadChart();
+    }
+
+    // เรียกตอนโหลดหน้า
+    document.addEventListener("DOMContentLoaded", loadSet100Symbols);
+
+
+    // ฟังก์ชันวิเคราะห์หุ้น
+    async function analyzeStock(event) {
+        event.preventDefault();
+        
+        const stockSymbol = document.getElementById('symbol').value;
+        
+        try {
+            // สร้าง request data object ที่มีชื่อชัดเจน
+            const analysisRequest = {
+                ticker: stockSymbol,
+            };
+
+            const response = await fetch('/analyze_stock_trend2', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(analysisRequest) // ใช้ชื่อตัวแปรที่สื่อความหมาย
+            });
+
+            const analysisResult = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(analysisResult.message || 'การวิเคราะห์ล้มเหลว');
+            }
+
+            if (analysisResult.success) {
+                displayAnalysisResults(analysisResult.data, analysisResult.chart6, analysisResult.chart7);
+                loadChart(stockSymbol);
+            }
+        } catch (error) {
+            console.error('Analysis error:', error);
+            alert(error.message || 'เกิดข้อผิดพลาดในการวิเคราะห์');
+        }
+    }
+
+    // ฟังก์ชันแสดงผลลัพธ์การวิเคราะห์
+    function displayAnalysisResults(result, chart6, chart7) {
+        const resultsContainer = document.getElementById('analysisResults');
+        const resultDiv = document.getElementById('result');
+        
+        // ตั้งค่าข้อมูลผลลัพธ์
+        document.getElementById('result-ticker').textContent = result.ticker;
+        document.getElementById('result-price').textContent = result.latest_close;
+        document.getElementById('result-trend').textContent = result.trend;
+        document.getElementById('result-bullish-score').textContent = `${result.bullish_score}/4`;
+        document.getElementById('result-price-zone').textContent = getPriceZoneText(result.price_zone);
+        document.getElementById('result-volume').textContent = result.volume_analysis.volume_signal + " : " + result.volume_analysis.trend_confirmation;
+        document.getElementById('result-analysis').textContent = result.analysis;
+        document.getElementById("chart6").src = "data:image/png;base64," + chart6;
+        document.getElementById("chart7").src = "data:image/png;base64," + chart7;
+        
+        // ตั้งค่าสีตามแนวโน้ม
+        const trendElement = document.getElementById('result-trend');
+        trendElement.style.color = result.trend === 'ขาขึ้น' ? 'green' : 'red';
+        
+        // แสดงผลลัพธ์
+        resultsContainer.style.display = 'block';
+        resultDiv.style.display = 'block';
+    }
+
+    // ฟังก์ชันช่วยเหลือสำหรับแสดงผลระดับราคา
+    function getPriceZoneText(priceZone) {
+        const zoneMap = {
+            'undervalued': 'ถูก (Undervalued)',
+            'overvalued': 'แพง (Overvalued)',
+            'fair_value': 'เหมาะสม (Fair Value)',
+            priceZone
+        };
+        
+        const bollingerMap = {
+            'above_upper': 'เหนือ Band บน',
+            'below_lower': 'ต่ำกว่า Band ล่าง',
+            'within_bands': 'ภายใน Bands'
+        };
+        
+        return `${priceZone.zone_analysis} | ${bollingerMap[priceZone.bollinger_position]}`;
+    }
+
+    // ฟังก์ชันช่วยเหลือสำหรับแสดงผลปริมาณซื้อขาย
+    function getVolumeText(volumeAnalysis) {
+        const volumeMap = {
+            'high_volume': 'สูงผิดปกติ',
+            'low_volume': 'ต่ำผิดปกติ',
+            'normal_volume': 'ปกติ'
+        };
+        
+        const confirmationMap = {
+            'uptrend_confirmed': 'ยืนยันขาขึ้น',
+            'downtrend_confirmed': 'ยืนยันขาลง',
+            'no_confirmation': 'ไม่ยืนยันแนวโน้ม'
+        };
+        
+        return `${volumeMap[volumeAnalysis.volume_signal]} | ${confirmationMap[volumeAnalysis.trend_confirmation]}`;
+    }
+    </script>
+
+</body>
+</html>
+

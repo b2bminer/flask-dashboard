@@ -1,0 +1,254 @@
+body {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f4f4f4;
+}
+.btn-open {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+.btn-open:hover {
+    background-color: #0056b3;
+}
+/* Modal Styling */
+.modal {
+    display: none;
+    position: fixed;
+    background-color: white;
+}
+.modal-content {
+    font-size: 14px;
+    background: white;
+    border-radius: 10px;
+    width: 800px;
+    height: 100%;
+}
+.close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 20px;
+    cursor: pointer;
+}
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+label {
+font-size: 13px; /* ลดขนาด label */
+}
+input {
+    font-size: 13px;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 100%;
+}
+button {
+    padding: 10px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 10px;
+    min-width: 150px;
+    height: 30px;
+    display: flex;
+    align-items: center;  /* จัดให้อยู่ตรงกลางแนวตั้ง */
+    justify-content: center; /* จัดให้อยู่ตรงกลางแนวนอน */
+}
+button:hover {
+    background-color: #218838;
+}
+.button-container {
+    display: flex; /* ใช้ Flexbox เพื่อให้ปุ่มอยู่ในแถวเดียวกัน */
+    gap: 5px; /* ระยะห่างระหว่างปุ่ม */
+}
+/* Work History Table */
+.work-history-container {
+    grid-column: span 2;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 2px;
+    max-height: 130px;
+    overflow-y: auto;
+    background: #f9f9f9;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+th {
+    background-color: #f2f2f2;
+}
+.btn-add-row {
+    background-color: #007bff;
+}
+.btn-add-row:hover {
+    background-color: #0056b3;
+}
+.btn-delete {
+    background-color: #dc3545;
+    color: white;
+    padding: 5px;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px;
+}
+.btn-delete:hover {
+    background-color: #c82333;
+}
+.btn-add-row, .btn-delete, .saveDataBtn {
+font-size: 10px;
+padding: 3px;
+border: none;
+}
+
+/* Work History Table */
+.data-grid {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.data-grid th, .data-grid td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+}
+
+.data-grid th {
+    background: #007bff;
+    color: white;
+}
+
+/* Form Layout - Two Columns */
+.form-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+/* Full-width Inputs for Address */
+.full-width {
+    grid-column: span 2;
+}
+
+/* Work History Section Scrollable */
+.work-history-container {
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 5px;
+    border: 1px solid #ddd;
+}
+
+/* ปรับ Layout ของ Employee Personal Information ให้เป็น 2 คอลัมน์ */
+.employee-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* กำหนดให้มี 2 คอลัมน์ */
+    gap: 15px;
+}
+
+/* ปรับ Label และ Input ให้จัดเต็มพื้นที่ */
+.employee-form label {
+    display: block;
+    font-weight: bold;
+}
+
+.employee-form input, 
+.employee-form textarea {
+    width: 100%; /* ทำให้ Input ขยายเต็มคอลัมน์ */
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+/* กำหนดให้ Address ใช้พื้นที่เต็ม 2 คอลัมน์ */
+.employee-form textarea {
+    grid-column: span 2;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .employee-form {
+        grid-template-columns: 1fr; /* เปลี่ยนเป็น 1 คอลัมน์ในหน้าจอเล็ก */
+    }
+}
+
+        /* Footer container: Fixed at bottom */
+        #footerControls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: white;
+            padding: 10px;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between; /* Align left & right */
+            align-items: center;
+        }
+
+        /* Pagination controls aligned to the left */
+        #paginationControls {
+            flex-grow: 1; /* Ensures it takes up available space */
+            text-align: left;
+        }
+
+        /* Action buttons aligned to the right */
+        #actionButtons {
+            text-align: right;
+        }
+
+        /* Style buttons */
+        #paginationControls button,
+        #actionButtons button {
+            padding: 8px 12px;
+            font-size: 14px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #paginationControls button {
+            background-color: #007bff;
+            color: white;
+        }
+
+        #paginationControls button:hover {
+            background-color: #0056b3;
+        }
+
+        #actionButtons button {
+            background-color: #28a745;
+            color: white;
+            margin-left: 10px;
+        }
+
+        #actionButtons button:hover {
+            background-color: #218838;
+        }
+

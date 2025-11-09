@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Lightweight Charts - Candle + Volume</title>
+  <script src="https://unpkg.com/lightweight-charts@4.0.0/dist/lightweight-charts.standalone.production.js"></script>
+  <style>
+    body { margin: 0; padding: 0; font-family: Arial; }
+    #container { display: flex; flex-direction: column; }
+    #chart, #volume-chart { margin: 0; }
+    #ema-controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 6px;
+      background: white;
+      border: 1px solid #ccc;
+      display: flex;
+      gap: 10px;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="ema-controls">
+    <div><b>O:</b> <span id="open">-</span></div>
+    <div><b>H:</b> <span id="high">-</span></div>
+    <div><b>L:</b> <span id="low">-</span></div>
+    <div><b>C:</b> <span id="close">-</span></div>
+    <div><b>V:</b> <span id="volumeVal">-</span></div>
+    <div><b>VA:</b> <span id="volma">-</span></div>
+  </div>
+
+  <div id="container">
+    <div id="chart" style="height: 300px;"></div>
+    <div id="volume-chart" style="height: 100px;"></div>
+  </div>
+
+  <script>
+    const width = window.innerWidth;
+
+    const commonLayout = {
+      background: { color: '#FFFFFF' },
+      textColor: '#000000',
+    };
+
+    const commonRightPriceScale = {
+      borderColor: '#cccccc',
+      scaleMargins: { top: 0.2, bottom: 0.1 },
+    };
+
+    const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+      width: width,
+      height: 300,
+      layout: commonLayout,
+      rightPriceScale: commonRightPriceScale,
+      crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+      timeScale: { timeVisible: true, borderColor: '#cccccc' },
+    });
+
+    const volumeChart = LightweightCharts.createChart(document.getElementById('volume-chart'), {
+      width: width,
+      height: 100,
+      layout: commonLayout,
+      rightPriceScale: commonRightPriceScale,
+      crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+      timeScale: { visible: false },
+    });
+
+    const candleSeries = chart.addCandlestickSeries();
+    const volumeSeries = volumeChart.addHistogramSeries({
+      color: '#26a69a',
+      priceFormat: { type: 'volume' },
+      priceScaleId: '',
+      scaleMargins: { top: 0.1, bottom: 0 },
+    });
+
+    const volumeMASeries = volumeChart.addLineSeries({
+      color: '#FFA500',
+      lineWidth: 1,
+      priceScaleId: '',
+    });
+
+    const data = [];
+    const timeStart = Math.floor(Date.now() / 1000) - 86400 * 100;
+    let price = 100;
+
+    for (let i = 0; i < 100; i++) {
+      const time = timeStart + i * 86400;
+      const open = price;
+      const close = open + (Math.random() - 0.5) * 4;
+      const high = Math.max(open, close) + Math.random() * 2;
+      const low = Math.min(open, close) - Math.random() * 2;
+      const volume = Math.floor(Math.random() * 1000) + 100;
+      data.push({ time, open, high, low, close, volume });
+      price = close;
+    }
+
+    candleSeries.setData(data.map(d => ({
+      time: d.time,
+      open: d.open,
+      high: d.high,
+      low: d.low,
+      close: d.close,
+    })));
+
+    volumeSeries.setData(data.map(d => ({
+      time: d.time,
+      value: d.volume,
+    })));
+
+    const period = 20;
+    const volumeMA = data.map((d, i) => {
+      if (i < period - 1) return null;
+      const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b.volume, 0);
+      return { time: d.time, value: sum / period };
+    }).filter(v => v !== null);
+    volumeMASeries.setData(volumeMA);
+
+    function updateInfo(time) {
+      const bar = data.find(d => d.time === time);
+      const ma = volumeMA.find(d => d.time === time);
+      if (!bar) return;
+      document.getElementById('open').textContent = bar.open.toFixed(2);
+      document.getElementById('high').textContent = bar.high.toFixed(2);
+      document.getElementById('low').textContent = bar.low.toFixed(2);
+      document.getElementById('close').textContent = bar.close.toFixed(2);
+      document.getElementById('volumeVal').textContent = bar.volume;
+      document.getElementById('volma').textContent = ma ? ma.value.toFixed(0) : '-';
+    }
+
+    chart.subscribeCrosshairMove(param => {
+      if (param.time && param.point) {
+        updateInfo(param.time);
+        volumeChart.setCrosshairPosition(param.point.x, 0);
+      }
+    });
+
+    volumeChart.subscribeCrosshairMove(param => {
+      if (param.time && param.point) {
+        updateInfo(param.time);
+        chart.setCrosshairPosition(param.point.x, 0);
+      }
+    });
+
+    function resizeCharts() {
+      chart.resize(chartDiv.clientWidth, chartDiv.clientHeight);
+      volumeChart.resize(volumeDiv.clientWidth, volumeDiv.clientHeight);
+    }
+
+    window.addEventListener('resize', resizeCharts);
+    resizeCharts();
+
+let isSyncing = false;
+
+function syncTimeScale(fromChart, toChart) {
+  fromChart.timeScale().subscribeVisibleTimeRangeChange(range => {
+    if (isSyncing) return;
+    isSyncing = true;
+    toChart.timeScale().setVisibleRange(range);
+    isSyncing = false;
+  });
+}
+
+// Sync ทั้งสองทาง
+syncTimeScale(chart, volumeChart);
+syncTimeScale(volumeChart, chart);
+
+
+</script>
+
+</body>
+</html>

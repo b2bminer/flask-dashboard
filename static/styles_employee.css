@@ -1,0 +1,284 @@
+body {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    height: 100vh;  /* กำหนดให้เว็บมีความสูงเท่าหน้าจอ */
+    background-color: #f4f4f4;
+    overflow-x: auto; /* ซ่อน Scroll Bar แนวนอน */
+    overflow-y: hidden;   /* แสดง Scroll Bar แนวตั้งเมื่อจำเป็น */
+}
+.btn-open {
+    padding: 1px 1px;
+    font-size: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+.btn-open:hover {
+    background-color: #0056b3;
+}
+.action-btn {
+    display: inline-block;  /* ✅ ทำให้ปุ่มเรียงต่อกัน */
+    border: none;
+    cursor: pointer;
+    padding: 0px 0px; /* ลดพื้นที่ภายในปุ่ม */
+    font-size: 10px; /* ลดขนาดตัวอักษร */
+    height: 18px; /* ลดความสูงของปุ่ม */
+}
+
+.edit-btn {
+    background-color: #4CAF50; /* สีเขียว */
+    color: white;
+}
+
+.delete-btn {
+    background-color: #f44336; /* สีแดง */
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    font-size: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease; /* เพิ่มเอฟเฟกต์การเปลี่ยนสี */
+}
+.delete-btn:hover {
+    background-color: #d32f2f; /* สีแดงเข้มขึ้นเมื่อวางเมาส์ */
+}
+#employeeTableBody tr {
+    height: 1px; /* ปรับความสูงของแถว */
+}
+#employeeTableBody td {
+    line-height: 2px; /* ทำให้ข้อความอยู่ตรงกลาง */
+    vertical-align: middle;
+}
+/* Modal Styling */
+.modal {
+    display: none;
+    background-color: white;
+    position: fixed;
+    top: 50%;        /* ปรับตำแหน่งจากด้านบน */
+    left: 50%;       /* ปรับตำแหน่งจากด้านซ้าย */
+    transform: translate(-50%, -50%);  /* ทำให้ Modal อยู่ตรงกลาง */
+    width: 800px;
+    background: white;
+    padding: 2px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+}
+.modal-content {
+    font-size: 14px;
+    background: white;
+    border-radius: 2px;
+    width: 800px;
+    height: 450px;
+    border: 2px solid #888;
+}
+.close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+
+.fifth {
+    float: left;
+    width: 20%;
+    margin: 0 2%;
+  }
+  
+.last-row {
+margin-bottom: 20px;
+}
+
+#input-submit {
+    clear: both;
+    margin-top: 10px;
+    padding: 1em 2em;
+    background-color: #e74c3c;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 150px;
+  }
+
+/* Clearfix */
+.cf:before,
+.cf:after {
+    content: " "; /* 1 */
+    display: table; /* 2 */
+}
+
+.cf:after {
+    clear: both;
+}
+
+label {
+font-size: 13px; /* ลดขนาด label */
+}
+input {
+    font-size: 13px;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+button {
+    padding: 2px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 2px;
+    min-width: 120px;
+    height: 20px;
+    display: flex;
+    align-items: center;  /* จัดให้อยู่ตรงกลางแนวตั้ง */
+    justify-content: center; /* จัดให้อยู่ตรงกลางแนวนอน */
+}
+button:hover {
+    background-color: #218838;
+}
+.button-container {
+    display: flex; /* ใช้ Flexbox เพื่อให้ปุ่มอยู่ในแถวเดียวกัน */
+    gap: 5px; /* ระยะห่างระหว่างปุ่ม */
+}
+
+/* Work History Section Scrollable */
+.work-history-container {
+    max-height: 100px;
+    overflow-y: auto;
+    padding-right: 5px;
+    border: 1px solid #ddd;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+th {
+    background-color: #f2f2f2;
+}
+.btn-add-row {
+    background-color: #007bff;
+}
+.btn-add-row:hover {
+    background-color: #0056b3;
+}
+.btn-delete {
+    background-color: #dc3545;
+    color: white;
+    padding: 5px;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px;
+}
+.btn-delete:hover {
+    background-color: #c82333;
+}
+.btn-add-row, .btn-delete, .saveDataBtn {
+font-size: 10px;
+padding: 3px;
+border: none;
+}
+
+.work-history-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.work-history-table thead {
+    position: sticky;
+    top: 0;
+    background-color: white; /* ให้หัวตารางไม่โปร่งแสง */
+    z-index: 10;
+}
+
+.work-history-table th, .work-history-table td {
+    border: 1px solid #ddd;
+    padding: 2px;
+    text-align: left;
+}
+
+.work-history-table th {
+    text-align: center; /* จัดข้อความให้อยู่กึ่งกลาง */
+    vertical-align: middle; /* จัดให้อยู่กึ่งกลางแนวตั้ง */
+    padding: 10px; /* ปรับระยะห่างภายใน */
+    background-color: #f2f2f2; /* สีพื้นหลังหัวตาราง */
+}
+
+label, input, textarea {
+    width: 100%;
+}
+
+textarea {
+    height: 50px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .employee-form {
+        grid-template-columns: 1fr; /* เปลี่ยนเป็น 1 คอลัมน์ในหน้าจอเล็ก */
+    }
+}
+
+/* Footer container: Fixed at bottom */
+#footerControls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: white;
+    padding: 5px;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between; /* Align left & right */
+    align-items: center;
+}
+
+/* Pagination controls aligned to the left */
+#paginationControls {
+    flex-grow: 1; /* Ensures it takes up available space */
+    text-align: left;
+}
+
+
+/* Style buttons */
+#paginationControls button,
+#actionButtons button {
+    font-size: 14px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+    display: inline-block;  /* ✅ ทำให้ปุ่มเรียงต่อกัน */
+}
+
+#paginationControls button {
+    background-color: #007bff;
+    color: white;
+}
+
+#paginationControls button:hover {
+    background-color: #0056b3;
+}
+
+#actionButtons button {
+    background-color: #28a745;
+    color: white;
+    margin-left: 10px;
+    height: 20px;
+    margin-right: 50px;
+}
+
+#actionButtons button:hover {
+    background-color: #218838;
+}
+

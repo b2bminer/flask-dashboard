@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>วิเคราะห์แนวโน้มราคาหุ้น</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist@latest/plotly.min.js"></script>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles_portfolio.css') }}">
+</head>
+<body class="bg-dark text-light">
+    <div class="container-fluid mt-4 px-md-3 px-2">
+        <div class="card" id="analyzestock">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="inputText" class="form-label">กรอกข้อมูลหุ้นที่ต้องการวิเคราะห์:</label>
+                    <textarea id="inputText" class="form-control" placeholder="พิมพ์ข้อความแนวโน้มหุ้น เช่น AOT RSI อยู่ที่ 75..."></textarea>
+                </div>
+                <button class="btn btn-primary" id="summarizeBtn" onclick="analyze()">สรุปหุ้นรายตัว</button>
+                <button class="btn btn-primary" id="analyzeBtn">วิเคราะห์หุ้น SET100</button>
+                <button class="btn btn-primary" id="analyzeWatchlistBtn">วิเคราะห์หุ้น Watchlist"</button>
+                <button class="btn btn-primary" id="deleteAllWatchlistBtn">ลบ Watchlist"</button>
+                <div id="loadingIndicator" class="text-center my-4" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>กำลังวิเคราะห์ข้อมูลหุ้น...</p>
+                </div>
+                <div id="result" class="mt-3 alert" style="display: none;">
+                    <p id="summary"></p>
+                    <img id="chart" src="" style="max-width:100%;" />
+                    <img id="chart2" src="" style="max-width:100%;" />
+                    <img id="chart3" src="" style="max-width:100%;" />
+                    <img id="chart4" src="" style="max-width:100%;" />
+                    <img id="chart5" src="" style="max-width:100%;" />
+                    <img id="chart6" src="" style="max-width:100%;" />
+                    <img id="chart7" src="" style="max-width:100%;" />
+                </div>
+                <div id="analysisSection" class="hidden-section">
+                    <div class="row mb-3 mt-4">
+                        <div class="col">
+                            <label for="zoneFilter">โซนราคา:</label>
+                            <select id="zoneFilter" class="form-select">
+                                <option value="">ทั้งหมด</option>
+                                <option value="ราคาอยู่ในโซนถูก (Undervalued)">ราคาอยู่ในโซนถูก (Undervalued)</option>
+                                <option value="ราคาอยู่ในโซนแพง (Overvalued)">ราคาอยู่ในโซนแพง (Overvalued)</option>
+                                <option value="ราคาอยู่ในระดับเหมาะสม (Fair Value)">ราคาอยู่ในระดับเหมาะสม (Fair Value)</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label for="volumeFilter">ปริมาณซื้อขาย:</label>
+                            <select id="volumeFilter" class="form-select">
+                                <option value="">ทั้งหมด</option>
+                                <option value="ปริมาณเพิ่มขึ้น">ปริมาณเพิ่มขึ้น</option>
+                                <option value="ปริมาณลดลง">ปริมาณลดลง</option>
+                                <option value="ปริมาณปกติ">ปริมาณปกติ</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label for="trendFilter">วิเคราะห์แนวโน้ม:</label>
+                            <select id="trendFilter" class="form-select">
+                                <option value="">ทั้งหมด</option>
+                                <option value="ปรับตัวขึ้น (Bullish)">ปรับตัวขึ้น (Bullish)</option>
+                                <option value="มีโอกาสปรับตัวขึ้น">มีโอกาสปรับตัวขึ้น</option>
+                                <option value="ยังไม่มีการปรับตัวขึ้นชัดเจน">ยังไม่มีการปรับตัวขึ้นชัดเจน</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label for="signalFilter">Signal:</label>
+                            <select id="signalFilter" class="form-select">
+                                <option value="">ทั้งหมด</option>
+                                <option value="Buy">Buy</option>
+                                <option value="Sell">Sell</option>
+                                <option value="-">-</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label for="rsistatusFilter">RSI+Pattern:</label>
+                            <select id="rsistatusFilter" class="form-select">
+                                <option value="">ทั้งหมด</option>
+                                <option value="Overbought">Overbought</option>
+                                <option value="Oversold">Oversold</option>
+                                <option value="Bullish">Bullish</option>
+                                <option value="Bearish">Bearish</option>
+                                <option value="Double Bottom">Double Bottom</option>
+                                <option value="-">-</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label for="rsiFilter">RSI Predicted:</label>
+                            <select id="rsiFilter" class="form-select">
+                                <option value="">ทั้งหมด</option>
+                                <option value="🟢 RSI เริ่มกลับตัวจากเขต Oversold">🟢 RSI เริ่มกลับตัวจากเขต Oversold</option>
+                                <option value="🔴 RSI กำลังอ่อนตัวจาก Overbought">🔴 RSI กำลังอ่อนตัวจาก Overbought</option>
+                                <option value="⚪ RSI เปลี่ยนแปลงปานกลาง">⚪ RSI เปลี่ยนแปลงปานกลาง</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label for="candleFilter">แท่งเทียนกลับตัว:</label>
+                            <select id="candleFilter" class="form-select">
+                                <option value="">ทั้งหมด</option>
+                                <option value="has">มี</option>
+                                <option value="none">ไม่มี</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label for="closechangeFilter">ราคาปิดเปลี่ยนแปลง:</label>
+                            <select id="closechangeFilter" class="form-select">
+                                <option value="">ทั้งหมด</option>
+                                <option value="up">เพิ่มขึ้น</option>
+                                <option value="down">ลดลง</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="stockTableContainer" class="table-responsive" style="max-width: 100%; max-height: 400px; overflow: auto;">
+                    <table id="stockTable" class="table table-striped table-dark table-hover table-bordered border-secondary">
+                        <thead>
+                            <tr>
+                                <th>1d</th>
+                                <th>1h</th>
+                                <th>15m</th>
+                                <th>ชื่อหุ้น</th>
+                                <th>ราคาปิด</th>
+                                <th>ราคาปิดก่อนหน้า</th>
+                                <th>เปลี่ยนแปลง</th>
+                                <th>% เปลี่ยนแปลง</th>
+                                <th>โซนราคา</th>
+                                <th>เทร็นด์ราคาสูงสุด</th>
+                                <th>ปริมาณซื้อขาย</th>
+                                <th>วิเคราะห์แนวโน้ม</th>
+                                <th>แท่งเทียนกลับตัว</th>
+                                <th>Signal</th>
+                                <th>RSI+Pattern</th>
+                                <th>RSI Predicted</th>
+                                <th>Actions</th>
+                                <th>Download Data</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stockTableBody">
+                            <!-- ข้อมูลจะถูกเพิ่มโดย JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Modal สำหรับแสดง quote_data -->
+                <div class="modal fade" id="quoteModal" tabindex="-1" aria-labelledby="quoteModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="quoteModalLabel">ข้อมูลหุ้น <span id="modalTicker"></span></h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body" id="quoteModalBody">
+                                <!-- ข้อมูลจะถูกเพิ่มโดย JavaScript -->
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-briefcase me-2"></i>Watchlist
+                </h5>
+                <button id="refreshWatchlistBtn" class="btn btn-sm btn-outline-light">
+                    <i class="bi bi-arrow-clockwise"></i> รีเฟรช
+                </button>
+            </div>
+            <div id="WatchlistLoader" class="text-center my-4" style="display: none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>กำลังโหลด Watch List...</p>
+            </div>
+            <div class="table-responsive" style="max-width: 100%; max-height: 400px; overflow: auto;">
+                <table class="table table-hover table-dark table-bordered border-secondary" id="watchlistTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>1d</th>
+                            <th>1h</th>
+                            <th>15m</th>
+                            <th>ชื่อหุ้น</th>
+                            <th class="text-end">ราคาปิด</th>
+                            <th class="text-end">ราคาปิดก่อนหน้า</th>
+                            <th class="text-end">เปลี่ยนแปลง</th>
+                            <th class="text-end">% เปลี่ยนแปลง</th>
+                            <th class="text-end">โซนราคา</th>
+                            <th class="text-end">เทร็นด์ราคาสูงสุด</th>
+                            <th class="text-end">ปริมาณซื้อขาย</th>
+                            <th class="text-end">วิเคราะห์แนวโน้ม</th>
+                            <th class="text-end">แท่งเทียนกลับตัว</th>
+                            <th class="text-end">Signal</th>
+                            <th class="text-end">RSI+Pattern</th>
+                            <th class="text-end">RSI Predicted</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="watchlistBody">
+                        <!-- Watchlist rows will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="container">
+                <div class="stock-selector">
+                    <div class="stock-list" id="set100StockList">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container">
+            <div class="stock-selector">
+                <div class="stock-list" id="watchlistStockList">
+                    <div class="stock-item active" data-symbol="NASDAQ:AAPL">Apple (AAPL)</div>
+                    <div class="stock-item" data-symbol="NASDAQ:MSFT">Microsoft (MSFT)</div>
+                    <div class="stock-item" data-symbol="NASDAQ:GOOGL">Google (GOOGL)</div>
+                    <div class="stock-item" data-symbol="NASDAQ:AMZN">Amazon (AMZN)</div>
+                    <div class="stock-item" data-symbol="NASDAQ:META">Meta (META)</div>
+                    <div class="stock-item" data-symbol="NASDAQ:TSLA">Tesla (TSLA)</div>
+                    <div class="stock-item" data-symbol="NYSE:JPM">JPMorgan (JPM)</div>
+                    <div class="stock-item" data-symbol="NYSE:V">Visa (V)</div>
+                    <div class="stock-item" data-symbol="FOREXCOM:XAUUSD">XAUUSD</div>
+                    <div class="stock-item" data-symbol="FOREXCOM:USDTHB">USDTHB</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div id="tradingview_chart"></div>
+            </div>
+            <div class="info">
+                <p>กราฟแสดงข้อมูลโดย TradingView | อัปเดตล่าสุด: <span id="current-date"></span></p>
+            </div>
+        </div>
+
+        {% if account_info %}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-wallet2"></i> ข้อมูลบัญชี
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- คอลัมน์ที่ 1 -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <h6 class="text-muted">วงเงินเครดิต</h6>
+                                <p class="fs-4 text-primary">
+                                    {{ "{:,.2f}".format(account_info.creditLimit) }} ฿
+                                </p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6 class="text-muted">วงเงินที่ใช้ได้</h6>
+                                <p class="fs-4 text-success">
+                                    {{ "{:,.2f}".format(account_info.lineAvailable) }} ฿
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- คอลัมน์ที่ 2 -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <h6 class="text-muted">เงินสดคงเหลือ</h6>
+                                <p class="fs-4 text-info">
+                                    {{ "{:,.2f}".format(account_info.cashBalance) }} ฿
+                                </p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6 class="text-muted">สถานะบัญชี</h6>
+                                <p>
+                                    <span class="badge bg-{{ 'success' if account_info.canBuy else 'secondary' }}">ซื้อได้</span>
+                                    <span class="badge bg-{{ 'success' if account_info.canSell else 'secondary' }}">ขายได้</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- ส่วนข้อมูลเพิ่มเติม -->
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <small class="text-muted">ประเภทบัญชี:</small>
+                                <p>{{ account_info.accountType }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <small class="text-muted">ประเภทลูกค้า:</small>
+                                <p>{{ account_info.clientType }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <small class="text-muted">รหัสบัญชี:</small>
+                                <p>{{ account_info.crossingKey }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="container-fluid mt-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-briefcase me-2"></i>พอร์ตโฟลิโอของคุณ
+                        </h5>
+                        <button id="refreshPortfolioBtn" class="btn btn-sm btn-outline-light">
+                            <i class="bi bi-arrow-clockwise"></i> รีเฟรช
+                        </button>
+                    </div>
+                    
+                    <div class="card-body bg-dark text-light">
+                        <div id="portfolioSummary" class="row mb-4 bg-dark">
+                            <!-- สรุปข้อมูลจะแสดงที่นี่ -->
+                        </div>                
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover table-bordered border-secondary">
+                                <thead>
+                                    <tr>
+                                    <th>หุ้น</th>
+                                    <th class="text-end">จำนวน</th>
+                                    <th class="text-end">ราคาเฉลี่ย</th>
+                                    <th class="text-end">ราคาปัจจุบัน</th>
+                                    <th class="text-end">มูลค่าตลาด</th>
+                                    <th class="text-end">กำไร/ขาดทุน</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="portfolioTableBody" class="text-light">
+                                    <!-- ข้อมูลพอร์ตจะแสดงที่นี่ -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p>{{quote_data}}</p>
+        {% endif %}
+
+        <!-- Modal Zoom Graph-->
+        <div class="modal fade" id="chartModal" tabindex="-1" aria-labelledby="chartModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-fullscreen modal-dialog-centered" style="margin-top: 5vh; margin-bottom: 5vh;">
+                <div class="modal-content h-100">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="chartModalLabel">กราฟแบบเต็มขนาด</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-0">
+                        <div class="modal-img-container">
+                            <img id="modalImage" src="" alt="กราฟแบบเต็มขนาด" class="modal-img">
+                            <div class="help-text" id="helpText">ใช้ Scroll เมาส์เพื่อซูมเข้า/ออก • ดับเบิลคลิกเพื่อรีเซ็ต</div>
+                            <div class="modal-controls-group">
+                                <div class="zoom-controls">
+                                    <button type="button" class="zoom-btn" id="zoomInBtn" title="ซูมเข้า">
+                                        <i class="fas fa-search-plus fa-icon-fix"></i>
+                                    </button>
+                                    <button type="button" class="zoom-btn" id="zoomOutBtn" title="ซูมออก">
+                                        <i class="fas fa-search-minus fa-icon-fix"></i>
+                                    </button>
+                                    <button type="button" class="zoom-btn" id="resetZoomBtn" title="รีเซ็ตการซูม">
+                                        <i class="fas fa-sync-alt fa-icon-fix"></i>
+                                    </button>
+                                </div>
+                                <div class="action-controls">
+                                    <button type="button" class="action-btn btn-download-modal" id="downloadBtn" title="ดาวน์โหลดกราฟ">
+                                        <i class="fas fa-download fa-icon-fix"></i>
+                                    </button>
+                                    <button type="button" class="action-btn btn-close-modal" id="closeModalBtn" title="ปิด" data-bs-dismiss="modal">
+                                        <i class="fas fa-times fa-icon-fix"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="mt-3">
+            <a href="/downloadStockdata?load_flag=WL" class="btn btn-outline-secondary me-2">Download Stock Data (Watchlist)</a>
+            <a href="/downloadStockdata?load_flag=SET100A" class="btn btn-outline-secondary me-2">Download Stock Data (Set100 #A)</a>
+            <a href="/downloadStockdata?load_flag=SET100B" class="btn btn-outline-secondary me-2">... (Set100 #B)</a>
+            <a href="/downloadStockdata?load_flag=SET100C" class="btn btn-outline-secondary me-2">... (Set100 #C)</a>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="position-fixed bottom-0 end-0 p-3" style="z-index: 11"></div>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+        document.getElementById('analyzeBtn').addEventListener('click', () => analyzeAllStocks("all"));
+        document.getElementById('analyzeWatchlistBtn').addEventListener('click', () => analyzeAllStocks("watchlist"));
+        document.getElementById('deleteAllWatchlistBtn').addEventListener('click', deleteAllWatchList);
+        document.getElementById('refreshWatchlistBtn').addEventListener('click', loadWatchlist);
+
+        const analysisSection = document.getElementById('analysisSection');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+
+        //const portfolioData = getPortfolioData();
+        //renderPortfolio(portfolioData);
+        loadWatchlist();
+        displaySet100StockList();
+    });
+
+    async function analyzeAllStocks(mode) {
+        try {
+            // แสดงสถานะกำลังโหลด
+            showLoading(true, 'StockAnalysis');
+            showResult('⏳ กำลังประมวลผล...', 'success');
+            
+            let bodyData = {};
+            if (mode === "all") {
+                bodyData = { analyze_all: true };
+            } else if (mode === "watchlist") {
+                bodyData = { analyze_watchlist: true };
+            }
+            const response = await fetch('/summarize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(bodyData)
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                analysisSection.classList.remove('hidden-section');
+                document.getElementById('stockTableContainer').style.display = 'block';
+                updateStockTable(data.all_results);
+                showResult('วิเคราะห์หุ้นทั้งหมดเรียบร้อย', 'success');
+                if (mode === "watchlist") {
+                    displayWatchlistSet100List(data.all_results);
+                }
+            } else {
+                showResult('เกิดข้อผิดพลาด: ' + data.message, 'danger');
+            }
+        } catch (error) {
+            showResult('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', 'danger');
+            console.error('Request failed:', error);
+        } finally {
+            showLoading(false, 'StockAnalysis');
+        }
+    }
+
+    function displayWatchlistSet100List(allResults) {
+        const stockListContainer = document.getElementById("watchlistStockList");
+        //stockListContainer.innerHTML = '';
+        const defaultSymbols = [
+            { ticker: "SET" }
+        ];
+        // รวม default กับ allResults
+        const combinedList = [...defaultSymbols, ...allResults];
+        combinedList.forEach((item, index) => {
+            const ticker = String(item.ticker || '').toUpperCase().trim();
+            const stockItem = document.createElement('div');
+            stockItem.className = `stock-item ${index === 0 ? 'active' : ''}`;
+            stockItem.setAttribute('data-symbol', `SET:${ticker}`);
+            stockItem.textContent = ticker;
+            stockItem.addEventListener('click', () => {
+                document.querySelectorAll('.stock-item').forEach(el => el.classList.remove('active'));
+                stockItem.classList.add('active');
+                loadTradingViewChart(stockItem.dataset.symbol);
+            });
+            //stockListContainer.appendChild(stockItem); ไม่ต้องการเพิ่มปุ่มรายชื่อหุ้น Watchlist
+        });
+        // --- ตอนนี้อัปเดตปุ่มใน SET100 ให้กลายเป็นสีเขียว ถ้าพบว่าอยู่ใน Watchlist ---
+        // สร้าง Set ของ watchlist tickers เพื่อค้นหาเร็วขึ้น
+        const watchlistSet = new Set(combinedList.map(i => String(i.ticker || '').toUpperCase().trim()));
+
+        // สำหรับแต่ละ ticker ใน set100Tickers ให้หา element ใน DOM ที่ตรงกัน แล้วเพิ่มคลาส in-watchlist
+        set100Tickers.forEach(ticker => {
+            if (watchlistSet.has(ticker)) {
+                // หา element ใน #set100StockList ที่มี data-symbol = SET:<TICKER>
+                const selector = `#set100StockList [data-symbol="SET:${ticker}"]`;
+                const el = document.querySelector(selector);
+                if (el) {
+                    el.classList.add('in-watchlist');
+                }
+            } else {
+                // ถ้าต้องการลบคลาสเมื่อไม่อยู่ใน watchlist ให้ทำที่นี่
+                const selector = `#set100StockList [data-symbol="SET:${ticker}"]`;
+                const el = document.querySelector(selector);
+                if (el) el.classList.remove('in-watchlist');
+            }
+        });
+
+    }
+
+    function loadTradingViewChart(symbol) {
+        if (!symbol) {
+            console.error("❌ Symbol is missing.");
+            return;
+        }
+
+        // ตรวจสอบว่ามี prefix เช่น SET:, NASDAQ:, NYSE:
+        // ถ้าไม่มี จะถือว่าเป็นตลาด SET โดยอัตโนมัติ
+        let fullSymbol = symbol.includes(":") ? symbol : `SET:${symbol}`;
+
+        // แปลงชื่อ symbol ให้เข้ากับ URL ของ TradingView
+        const encodedSymbol = encodeURIComponent(fullSymbol);
+
+        // เปิด TradingView แสดงในหน้าต่างใหม่
+        const tradingViewUrl = `https://www.tradingview.com/chart/?symbol=${encodedSymbol}`;
+        window.open(tradingViewUrl, '_blank');
+
+    }
+
+    let set100Tickers = []; // เก็บรายการ SET100 (มาตรฐานเป็นตัวพิมพ์ใหญ่)
+
+    async function displaySet100StockList() {
+        try {
+            const stockListContainer = document.getElementById("set100StockList");
+            stockListContainer.innerHTML = '';
+
+            const response = await fetch('/get_set100', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            });
+            const data = await response.json();
+            if (!Array.isArray(data)) {
+                showResult('ข้อมูลที่ได้รับไม่ถูกต้อง', 'danger');
+                return;
+            }
+            set100Tickers = data.map(t => String(t).toUpperCase().trim());
+            const extraStocks = [
+                { symbol: 'USDZ2025', market: 'TFEX' }
+            ];
+            const stockList = [
+                { symbol: 'SET', market: 'SET' },
+                ...extraStocks,
+                ...data.map(t => ({ symbol: t, market: 'SET' }))
+            ];
+            stockList.forEach((item, index) => {
+                const normalized = item.symbol.toUpperCase().trim();
+                const stockItem = document.createElement('div');
+                stockItem.className = `stock-item ${index === 0 ? 'active' : ''}`;
+                stockItem.setAttribute('data-symbol', `${item.market}:${normalized}`);
+                stockItem.textContent = normalized;
+
+                stockItem.addEventListener('click', () => {
+                    document.querySelectorAll('.stock-item').forEach(el => el.classList.remove('active'));
+                    stockItem.classList.add('active');
+                    loadTradingViewChart(stockItem.dataset.symbol);
+                });
+                stockListContainer.appendChild(stockItem);
+            });
+        } catch (error) {
+            showResult('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', 'danger');
+            console.error('Request failed:', error);
+        } finally {
+            showLoading(false, 'StockAnalysis');
+        }
+    }
+
+    function showLoading(isLoading, type) {
+        //const loader = document.getElementById('loadingIndicator');
+        //const table = document.getElementById('stockTable');
+        let loader, content, result;        
+        if (type === 'StockAnalysis') {
+            loader = document.getElementById('loadingIndicator');
+            table = document.getElementById('stockTable');
+            //result = document.getElementById('stockAnalysisResult');
+        } else if (type === 'Watchlist') {
+            loader = document.getElementById('WatchlistLoader');
+            table = document.getElementById('watchlistTable');
+            //result = document.getElementById('watchlistResult');
+        } else {
+            console.error('Unknown loading type:', type);
+            return;
+        }
+        if (isLoading) {
+            loader.style.display = 'block';
+            table.style.display = 'none';
+        } else {
+            loader.style.display = 'none';
+            table.style.display = 'table';
+        }
+    }
+
+    function showResult(message, type) {
+        const summaryP = document.getElementById('summary');
+        const resultDiv = document.getElementById('result');
+
+        summaryP.textContent = message;
+        resultDiv.className = `alert alert-${type}`;
+        resultDiv.style.display = 'block';
+    }
+
+    function updateStockTable(allResults) {
+        try {
+            // อัปเดตตารางด้วยข้อมูล allResults
+            const tableBody = document.getElementById('stockTableBody');
+            tableBody.innerHTML = '';
+            
+            allResults.forEach((result, index) => {
+                const isInWatchlist = result.is_in_watchlist || false;
+                const row = document.createElement('tr');
+
+                row.setAttribute('data-zone', result.price_zone?.zone_analysis || '');
+                row.setAttribute('data-volume', result.volume_analysis?.volume_signal || '');
+                row.setAttribute('data-trend', result.analysis || '');
+                row.setAttribute('data-signal', result.signal || '');
+                row.setAttribute('data-rsistatus', result.rsi_status || '');
+                row.setAttribute('data-rsi', result.rsi_signal || '');
+                row.setAttribute('data-candle', result.candle_pattern || '');
+                row.setAttribute('data-closechange', 
+                    result.latest_close && result.previous_close ? 
+                    (result.latest_close > result.previous_close ? 'up' : 'down') : '');
+
+                const previousClose = result.previous_close ? result.previous_close.toFixed(2) : '-';
+                const priceChangeAbs = result.price_change && result.price_change.absolute 
+                    ? result.price_change.absolute.toFixed(2) 
+                    : '-';
+                const priceChangePercent = result.price_change && result.price_change.percent 
+                    ? result.price_change.percent.toFixed(2) + '%' 
+                    : '-';
+                const priceZone = result.price_zone && result.price_zone.zone_analysis 
+                    ? result.price_zone.zone_analysis 
+                    : '-';
+                const volumeSignal = result.volume_analysis && result.volume_analysis.volume_signal 
+                    ? result.volume_analysis.volume_signal 
+                    : '-';
+
+                // สร้างแถวตารางตามข้อมูล result
+                row.innerHTML = `
+                    <td class="text-end">
+                        <img id="chart777-${index}" 
+                            src="data:image/png;base64,${result.chart77}" 
+                            alt="Chart" 
+                            class="chart-img"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#chartModal"
+                            style="width: 250px; height:auto; cursor:zoom-in;">
+                    </td>
+                    <td class="text-end">
+                        <img id="chart778-${index}" 
+                            src="data:image/png;base64,${result.chart78}" 
+                            alt="Chart" 
+                            class="chart-img"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#chartModal"
+                            style="width: 250px; height:auto; cursor:zoom-in;">
+                    </td>
+                    <td class="text-end">
+                        <img id="chart779-${index}" 
+                            src="data:image/png;base64,${result.chart79}" 
+                            alt="Chart" 
+                            class="chart-img"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#chartModal"
+                            style="width: 250px; height:auto; cursor:zoom-in;">
+                    </td>
+                    <td>
+                        <a href="/stock_analyze2/${encodeURIComponent(result.ticker)}" class="ticker-link" target="_blank">
+                            ${result.ticker || '-'}
+                        </a>
+                    </td>
+                    <td class="text-end">${result.latest_close || '-'}</td>
+                    <td class="text-end">${previousClose}</td>
+                    <td class="text-end">${priceChangeAbs}</td>
+                    <td class="text-end">${priceChangePercent}</td>
+                    <td>${priceZone}</td>
+                    <td>${result.trendHighPrice_analysis}</td>
+                    <td>${volumeSignal}</td>
+                    <td>${result.analysis || '-'}</td>
+                    <td>${result.candle_pattern || '-'}</td>
+                    <td>${result.signal || '-'}</td>
+                    <td>${result.rsi_status || '-'}</td>
+                    <td>${result.rsi_signal || '-'}</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-primary view-quote" 
+                                data-ticker="${result.ticker}"
+                                data-prev-close="${result.previous_close || ''}"
+                                data-price-open="${result.open || ''}"
+                                title="ดูข้อมูลราคา">
+                        <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-sm ${isInWatchlist ? 'btn-outline-secondary' : 'btn-outline-success'} add-watchlist" 
+                                data-ticker="${result.ticker}"
+                                ${isInWatchlist ? 'disabled' : ''}>
+                            <i class="bi ${isInWatchlist ? 'bi-check' : 'bi-plus-circle'}"></i>
+                        </button>
+                    </td>
+                    <td>
+                        <a href="/downloadStockdata?ticker=${result.ticker}" class="download-link">
+                            <i class="bi bi-download"></i>
+                        </a>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+            setupFilterHandlers();
+
+            document.querySelectorAll('.view-quote').forEach(btn => {
+                btn.addEventListener('click', function() {
+                const ticker = this.getAttribute('data-ticker');
+                const prevClose = this.getAttribute('data-prev-close');
+                const priceOpen = this.getAttribute('data-price-open');
+                showQuoteData(ticker, prevClose, priceOpen);
+                });
+            });
+            document.querySelectorAll('.add-watchlist').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                const ticker = this.getAttribute('data-ticker');
+                await addToWatchList(ticker, this);
+                });
+            });
+        } catch (error) {
+            console.error('Error updating table:', error);
+            const tableBody = document.getElementById('stockTableBody');
+            tableBody.innerHTML = `
+            <tr>
+                <td colspan="13" class="text-center text-danger">
+                เกิดข้อผิดพลาดในการโหลดข้อมูล Watch List
+                </td>
+            </tr>
+            `;
+        }
+    }
+
+    function setupFilterHandlers() {
+        const filters = ['zone', 'volume', 'trend', 'candle', 'closechange', 'rsi', 'rsistatus','signal'];
+        
+        filters.forEach(filter => {
+            document.getElementById(`${filter}Filter`).addEventListener('change', filterTable);
+        });
+    }
+
+    // ฟังก์ชันสำหรับกรองตาราง
+    function filterTable() {
+        const zoneValue = document.getElementById('zoneFilter').value;
+        const volumeValue = document.getElementById('volumeFilter').value;
+        const trendValue = document.getElementById('trendFilter').value;
+        const signalValue = document.getElementById('signalFilter').value;
+        const rsistatusValue = document.getElementById('rsistatusFilter').value;
+        const rsiValue = document.getElementById('rsiFilter').value;
+        const candleValue = document.getElementById('candleFilter').value;
+        const closechangeValue = document.getElementById('closechangeFilter').value;
+
+        document.querySelectorAll('#stockTableBody tr').forEach(row => {
+            const zone = row.getAttribute('data-zone');
+            const volume = row.getAttribute('data-volume');
+            const trend = row.getAttribute('data-trend');
+            const signal = row.getAttribute('data-signal');
+            const rsistatus = row.getAttribute('data-rsistatus');
+            const rsi = row.getAttribute('data-rsi');
+            const candle = row.getAttribute('data-candle');
+            const closechange = row.getAttribute('data-closechange');
+
+            const zoneMatch = !zoneValue || zone === zoneValue;
+            const volumeMatch = !volumeValue || volume === volumeValue;
+            const trendMatch = !trendValue || trend === trendValue;
+            const signalMatch = !signalValue || signal === signalValue;
+            const rsistatusMatch = !rsistatusValue || rsistatus === rsistatusValue;
+            const rsiMatch = !rsiValue || rsi === rsiValue;
+            const candleMatch = !candleValue || 
+                               (candleValue === 'has' && candle) || 
+                               (candleValue === 'none' && !candle);
+            const closechangeMatch = !closechangeValue || closechange === closechangeValue;
+
+            row.style.display = (zoneMatch && volumeMatch && trendMatch && signalMatch && rsistatusMatch && rsiMatch && 
+                               candleMatch && closechangeMatch) ? '' : 'none';
+        });
+    }
+
+    async function summarize() {
+        const input = document.getElementById("inputText").value;
+        showResult('⏳ กำลังประมวลผล...', 'success');
+
+        try {
+            const response = await fetch("/summarize", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ text: input })
+            });
+
+            const data = await response.json();
+            if (data.status === 'success') {
+                showResult('วิเคราะห์หุ้นทั้งหมดเรียบร้อย ' + data.summary, 'success');
+            } else {
+                showResult('เกิดข้อผิดพลาด: ' + data.status, 'danger');
+            }
+
+        } catch (error) {
+            showResult('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', 'danger');
+            console.error('Request failed:', error);
+        }
+    }
+
+    // ฟังก์ชันแปลงข้อมูล Python เป็น JSON ใน template
+    function getPortfolioData() {
+        try {
+            // ใช้ Flask template เพื่อส่งข้อมูลไปยัง JavaScript
+            return {
+            portfolioList: {{ portfolio_data.portfolioList|default([])|tojson|safe }},
+            totalPortfolio: {{ portfolio_data.totalPortfolio|default({"marketValue":0,"profit":0,"percentProfit":0})|tojson|safe }}
+            };
+        } catch (error) {
+            console.error('Error parsing portfolio data:', error);
+            return {
+            portfolioList: [],
+            totalPortfolio: {
+                marketValue: 0,
+                profit: 0,
+                percentProfit: 0
+            }
+            };
+        }
+    }
+
+    // ฟังก์ชันจัดรูปแบบตัวเลข
+    function formatNumber(num) {
+        if (num === null || num === undefined || isNaN(num)) return '-';
+        return num.toLocaleString('th-TH', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    // ฟังก์ชันแสดงผลพอร์ตโฟลิโอ
+    function renderPortfolio(data) {
+        const summaryContainer = document.getElementById('portfolioSummary');
+        const tableBody = document.getElementById('portfolioTableBody');
+        
+        // แสดงข้อมูลสรุป
+        summaryContainer.innerHTML = `
+            <div class="col-md-4 mb-3">
+            <div class="card h-100 border-0 bg-light">
+                <div class="card-body text-center py-3">
+                <h6 class="text-muted mb-2">มูลค่าพอร์ตโฟลิโอ</h6>
+                <h4 class="text-primary mb-0">${formatNumber(data.totalPortfolio.marketValue)} ฿</h4>
+                </div>
+            </div>
+            </div>
+            <div class="col-md-4 mb-3">
+            <div class="card h-100 border-0 bg-light">
+                <div class="card-body text-center py-3">
+                <h6 class="text-muted mb-2">กำไร/ขาดทุน</h6>
+                <h4 class="${data.totalPortfolio.profit >= 0 ? 'text-success' : 'text-danger'} mb-0">
+                    ${formatNumber(data.totalPortfolio.profit)} ฿
+                </h4>
+                </div>
+            </div>
+            </div>
+            <div class="col-md-4 mb-3">
+            <div class="card h-100 border-0 bg-light">
+                <div class="card-body text-center py-3">
+                <h6 class="text-muted mb-2">% กำไร/ขาดทุน</h6>
+                <h4 class="${data.totalPortfolio.percentProfit >= 0 ? 'text-success' : 'text-danger'} mb-0">
+                    ${formatNumber(data.totalPortfolio.percentProfit)}%
+                </h4>
+                </div>
+            </div>
+            </div>
+        `;
+        
+        // แสดงรายการหุ้น
+        if (data.portfolioList.length === 0) {
+            tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-5">
+                <div class="text-muted">
+                    <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                    <p class="mt-2 mb-0">ยังไม่มีหลักทรัพย์ในพอร์ตโฟลิโอ</p>
+                </div>
+                </td>
+            </tr>
+            `;
+        } else {
+            tableBody.innerHTML = '';
+            data.portfolioList.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                <a href="/stock_analyze2?ticker=${item.symbol}" class="text-decoration-none fw-bold">
+                    ${item.symbol}
+                </a>
+                </td>
+                <td class="text-end">${formatNumber(item.amount)}</td>
+                <td class="text-end">${formatNumber(item.averagePrice)}</td>
+                <td class="text-end">${formatNumber(item.marketPrice)}</td>
+                <td class="text-end">${formatNumber(item.marketValue)}</td>
+                <td class="text-end ${item.profit >= 0 ? 'text-success' : 'text-danger'}">
+                ${formatNumber(item.profit)} ฿ (${formatNumber(item.percentProfit)}%)
+                </td>
+            `;
+            tableBody.appendChild(row);
+            });
+        }
+    }
+
+    // ฟังก์ชันแสดงข้อมูล quote_data ใน Modal
+    async function showQuoteData(ticker, prevClose, priceOpen) {
+        try {
+            // ตั้งค่า Modal
+            document.getElementById('modalTicker').textContent = ticker;
+            const modalBody = document.getElementById('quoteModalBody');
+            modalBody.innerHTML = '<div class="text-center"><div class="spinner-border text-primary"></div></div>';
+            
+            // แสดง Modal
+            const modal = new bootstrap.Modal(document.getElementById('quoteModal'));
+            modal.show();
+            
+            // ดึงข้อมูล quote_data จากเซิร์ฟเวอร์
+            const response = await fetch(`/get_quote?ticker=${ticker}`);
+            const quoteData = await response.json();
+
+            const formatValue = (value, isNumber = true) => {
+            if (value === '-' || value === null || value === undefined) return '-';
+            if (!isNumber) return value;
+            return typeof value === 'number' ? value.toFixed(2) : parseFloat(value).toFixed(2);
+            };
+            const formattedPrevClose = formatValue(prevClose);
+            const formattedpriceOpen = formatValue(priceOpen);
+
+            // แสดงข้อมูลใน Modal
+            modalBody.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                <div class="mb-3">
+                    <h6>ราคาล่าสุด</h6>
+                    <p class="fs-4">${quoteData.last?.toFixed(2) || '-'} ฿</p>
+                </div>
+                <div class="mb-3">
+                    <h6>เปลี่ยนแปลง</h6>
+                    <p class="fs-4 ${quoteData.change >= 0 ? 'text-success' : 'text-danger'}">
+                    ${quoteData.change?.toFixed(2) || '-'} ฿ (${quoteData.percentChange?.toFixed(2) || '-'}%)
+                    </p>
+                </div>
+                </div>
+                <div class="col-md-6">
+                <div class="mb-3">
+                    <h6>ราคาสูงสุดวันนี้</h6>
+                    <p>${quoteData.high?.toFixed(2) || '-'} ฿</p>
+                </div>
+                <div class="mb-3">
+                    <h6>ราคาต่ำสุดวันนี้</h6>
+                    <p>${quoteData.low?.toFixed(2) || '-'} ฿</p>
+                </div>
+                <div class="mb-3">
+                    <h6>ปริมาณซื้อขาย</h6>
+                    <p>${quoteData.volume?.toLocaleString() || '-'} หุ้น</p>
+                </div>
+                </div>
+            </div>
+            <div class="mt-3">
+                <h6>ข้อมูลเพิ่มเติม</h6>
+                <div class="table-responsive">
+                <table class="table table-sm">
+                    <tr>
+                    <td>ราคาเปิด</td>
+                    <td>${formattedpriceOpen} ฿</td>
+                    <td>ราคาปิดก่อนหน้า</td>
+                    <td>${formattedPrevClose} ฿</td>
+                    <td>วันเวลาอัปเดต</td>
+                    <td>${quoteData.time || '-'}</td>
+                    </tr>
+                </table>
+                </div>
+            </div>
+            `;
+            
+        } catch (error) {
+            console.error('Error fetching quote data:', error);
+            modalBody.innerHTML = '<div class="alert alert-danger">ไม่สามารถดึงข้อมูลได้</div>';
+        }
+    }
+
+    async function addToWatchList(ticker, buttonElement) {
+        try {
+            // เปลี่ยนปุ่มเป็นสถานะกำลังโหลด
+            buttonElement.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            buttonElement.disabled = true;
+            
+            // เรียก API เพื่อเพิ่มใน Watch List
+            const response = await fetch('/api/watchlist', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ticker: ticker })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+            // แสดง Toast แจ้งเตือนสำเร็จ
+            showToast('success', `เพิ่ม ${ticker} ใน Watch List สำเร็จ`);
+            
+            // เปลี่ยนไอคอนปุ่มเป็นเครื่องหมายถูก
+            buttonElement.innerHTML = '<i class="bi bi-check"></i>';
+            buttonElement.classList.remove('btn-outline-success');
+            buttonElement.classList.add('btn-outline-secondary');
+            } else {
+            throw new Error(result.message || 'เกิดข้อผิดพลาดในการเพิ่ม Watch List');
+            }
+        } catch (error) {
+            console.error('Error adding to watchlist:', error);
+            showToast('danger', error.message);
+            
+            // รีเซ็ตปุ่มกลับสู่สถานะปกติ
+            buttonElement.innerHTML = '<i class="bi bi-plus-circle"></i>';
+            buttonElement.disabled = false;
+        }
+    }
+
+    function showToast(type, message) {
+        const toastContainer = document.getElementById('toastContainer');
+        const toastId = 'toast-' + Date.now();
+        
+        const toastHtml = `
+            <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            </div>
+        `;
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+        const toast = new bootstrap.Toast(document.getElementById(toastId));
+        toast.show();
+        
+        // ลบ Toast เมื่อปิด
+        document.getElementById(toastId).addEventListener('hidden.bs.toast', function() {
+            this.remove();
+        });
+    }
+
+    async function loadWatchlist() {
+        try {
+            showLoading(true, 'Watchlist');
+
+            const response = await fetch("/render_watchlist");
+            const data = await response.json();
+
+            const tableBody = document.getElementById("watchlistBody");
+            tableBody.innerHTML = '';
+
+                data.all_results.forEach((item, index) => {
+                    const previousClose = item.previous_close ? item.previous_close.toFixed(2) : '-';
+                    const priceChangeAbs = item.price_change && item.price_change.absolute 
+                    ? item.price_change.absolute.toFixed(2) 
+                    : '-';
+                    const priceChangePercent = item.price_change && item.price_change.percent 
+                    ? item.price_change.percent.toFixed(2) + '%' 
+                    : '-';
+                    const priceZone = item.price_zone && item.price_zone.zone_analysis 
+                        ? item.price_zone.zone_analysis 
+                        : '-';
+                    const volumeSignal = item.volume_analysis && item.volume_analysis.volume_signal 
+                        ? item.volume_analysis.volume_signal 
+                        : '-';
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="text-end">
+                            <img id="chart77-${index}" 
+                                src="data:image/png;base64,${item.chart77}" 
+                                alt="Chart" 
+                                class="chart-img"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#chartModal"
+                                style="width: 250px; height:auto; cursor:zoom-in;">
+                        </td>
+                        <td class="text-end">
+                            <img id="chart78-${index}" 
+                                src="data:image/png;base64,${item.chart78}" 
+                                alt="Chart" 
+                                class="chart-img"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#chartModal"
+                                style="width: 250px; height:auto; cursor:zoom-in;">
+                        </td>
+                        <td class="text-end">
+                            <img id="chart79-${index}" 
+                                src="data:image/png;base64,${item.chart79}" 
+                                alt="Chart" 
+                                class="chart-img"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#chartModal"
+                                style="width: 250px; height:auto; cursor:zoom-in;">
+                        </td>
+                        <td>
+                            <a href="/stock_analyze2/${encodeURIComponent(item.ticker)}" class="ticker-link">
+                                ${item.ticker || '-'}
+                            </a>
+                        </td>
+                        <td class="text-end">${item.latest_close || '-'}</td>
+                        <td class="text-end">${previousClose}</td>
+                        <td class="text-end">${priceChangeAbs}</td>
+                        <td class="text-end">${priceChangePercent}</td>
+                        <td class="text-end">${priceZone}</td>
+                        <td class="text-end">${item.trendHighPrice_analysis}</td>
+                        <td class="text-end">${volumeSignal}</td>
+                        <td class="text-end">${item.analysis}</td>
+                        <td class="text-end">${item.candle_pattern || '-'}</td>
+                        <td class="text-end">${item.signal}</td>
+                        <td class="text-end">${item.rsi_status}</td>
+                        <td class="text-end">${item.rsi_signal}</td>
+                        <td>-</td> <!-- ถ้าไม่รวม created_at -->
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-danger delete-watchlist" data-ticker="${item.ticker}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+                displayWatchlistSet100List(data.all_results);
+
+        } catch (error) {
+            console.error("Error loading watchlist:", error);
+        } finally {
+            showLoading(false, 'Watchlist');
+        }
+
+        document.querySelectorAll('.delete-watchlist').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const ticker = this.getAttribute('data-ticker');
+                const confirmed = confirm(`คุณต้องการลบ ${ticker} ออกจาก Watchlist ใช่หรือไม่?`);
+                if (confirmed) {
+                    await deleteFromWatchList(ticker);
+                    loadWatchlist(); // โหลดใหม่หลังลบ
+                }
+            });
+        });
+    }
+
+    async function deleteAllWatchList() {
+        try {
+            const confirmed = confirm(`คุณต้องการลบรายชื่อหุ้นทั้งหมดออกจาก Watchlist ใช่หรือไม่?`);
+            if (confirmed) {
+                await deleteFromWatchList('all');
+                loadWatchlist(); // โหลดใหม่หลังลบ
+            }
+        } catch (error) {
+            console.error("Error deleting watchlist:", error);
+        }
+    }
+
+    async function deleteFromWatchList(ticker) {
+        try {
+            const response = await fetch(`/watchlist/${ticker}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                alert(`ลบไม่สำเร็จ: ${result.error}`);
+            }
+        } catch (error) {
+            console.error("Error deleting watchlist item:", error);
+        }
+    }
+
+    async function analyze() {
+      const symbol = document.getElementById("inputText").value.trim();
+      document.getElementById("chart").src = "";
+      showResult('⏳ กำลังประมวลผล...', 'success');
+
+      const res = await fetch("/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbol })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showResult("📊 " + data.summary, 'success');
+        //document.getElementById("summary").textContent = "📊 " + data.summary;
+        document.getElementById("chart").src = "data:image/png;base64," + data.chart;
+        document.getElementById("chart2").src = "data:image/png;base64," + data.chart2;
+        document.getElementById("chart3").src = "data:image/png;base64," + data.chart3;
+        document.getElementById("chart4").src = "data:image/png;base64," + data.chart4;
+        document.getElementById("chart5").src = "data:image/png;base64," + data.chart5;
+        document.getElementById("chart6").src = "data:image/png;base64," + data.chart6;
+        document.getElementById("chart7").src = "data:image/png;base64," + data.chart7;
+
+    } else {
+        showResult("❌ " + data.error, 'danger');
+        //document.getElementById("summary").textContent = "❌ " + data.error;
+      }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const chartModal = document.getElementById('chartModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalTitle = document.getElementById('chartModalLabel');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const helpText = document.getElementById('helpText');
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        const resetZoomBtn = document.getElementById('resetZoomBtn');
+        
+        let scale = 1;
+        let posX = 0;
+        let posY = 0;
+        let isDragging = false;
+        let startX, startY;
+        let currentModal = null;
+        
+        // ฟังก์ชันปิด Modal และลบ backdrop
+        function closeModal() {
+            if (currentModal) {
+                currentModal.hide();
+            }
+            
+            // ลบ modal backdrop โดยตรง
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => {
+                backdrop.parentNode.removeChild(backdrop);
+            });
+            
+            // รีเซ็ต style ของ body เพื่อให้สามารถเลื่อนได้
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = 'auto';
+            document.body.style.paddingRight = '0';
+            document.body.style.position = 'static';
+        }
+        
+        // เมื่อ modal ถูกแสดง
+        chartModal.addEventListener('show.bs.modal', function (event) {
+            const clickedChart = event.relatedTarget;
+            modalImage.src = clickedChart.src;
+            modalTitle.textContent = clickedChart.alt;
+            
+            // รีเซ็ตการซูมและตำแหน่ง
+            scale = 1;
+            posX = 0;
+            posY = 0;
+            applyTransform();
+            
+            // ตั้งค่าปุ่มดาวน์โหลด
+            downloadBtn.onclick = function() {
+                const link = document.createElement('a');
+                link.href = clickedChart.src;
+                link.download = clickedChart.alt + '.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+            
+            // เก็บ reference ไปยัง modal instance
+            currentModal = new bootstrap.Modal(chartModal);
+        });
+        
+        // ฟังก์ชันปรับการแสดงผล - แก้ไขให้ตรึงตำแหน่ง
+        function applyTransform() {
+            const container = modalImage.parentElement;
+            const containerRect = container.getBoundingClientRect();
+            const imageRect = modalImage.getBoundingClientRect();
+            
+            // จำกัดการเคลื่อนไหวเพื่อไม่ให้ภาพออกนอกขอบเขต
+            const maxX = Math.max(0, (imageRect.width * scale - containerRect.width) / 2);
+            const maxY = Math.max(0, (imageRect.height * scale - containerRect.height) / 2);
+            
+            posX = Math.min(maxX, Math.max(-maxX, posX));
+            posY = Math.min(maxY, Math.max(-maxY, posY));
+            
+            modalImage.style.transformOrigin = 'center center';
+            modalImage.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+            modalImage.style.cursor = scale > 1 ? 'grab' : 'default';
+        }
+        
+        // การซูมด้วย Scroll เมาส์ - แก้ไขการคำนวณตำแหน่ง
+        modalImage.addEventListener('wheel', function(e) {
+            e.preventDefault();
+            
+            // แสดงคำแนะนำเมื่อเริ่มใช้ Scroll
+            //helpText.style.display = 'block';
+            setTimeout(() => {
+                helpText.style.display = 'none';
+            }, 3000);
+            
+            const rect = modalImage.getBoundingClientRect();
+            const containerRect = modalImage.parentElement.getBoundingClientRect();
+            
+            // คำนวณตำแหน่งเมาส์สัมพันธ์กับ container
+            const offsetX = e.clientX - containerRect.left;
+            const offsetY = e.clientY - containerRect.top;
+            
+            // คำนวณตำแหน่งเมาส์สัมพันธ์กับภาพ (ก่อนซูม)
+            const imageX = (offsetX - posX) / scale;
+            const imageY = (offsetY - posY) / scale;
+            
+            const delta = e.deltaY > 0 ? -0.2 : 0.2;
+            const newScale = Math.max(0.5, Math.min(5, scale + delta));
+            
+            // คำนวณตำแหน่งใหม่เพื่อให้จุดที่คลิกอยู่คงที่
+            posX = offsetX - imageX * newScale;
+            posY = offsetY - imageY * newScale;
+            
+            scale = newScale;
+            applyTransform();
+        });
+        
+        // การลากเพื่อเลื่อนกราฟ
+        modalImage.addEventListener('mousedown', function(e) {
+            if (scale > 1) {
+                isDragging = true;
+                startX = e.clientX - posX;
+                startY = e.clientY - posY;
+                modalImage.style.cursor = 'grabbing';
+            }
+        });
+        
+        document.addEventListener('mousemove', function(e) {
+            if (isDragging) {
+                posX = e.clientX - startX;
+                posY = e.clientY - startY;
+                applyTransform();
+            }
+        });
+        
+        document.addEventListener('mouseup', function() {
+            isDragging = false;
+            modalImage.style.cursor = scale > 1 ? 'grab' : 'default';
+        });
+        
+        // ดับเบิลคลิกเพื่อรีเซ็ต
+        modalImage.addEventListener('dblclick', function() {
+            scale = 1;
+            posX = 0;
+            posY = 0;
+            applyTransform();
+            
+            // แสดงคำแนะนำ
+            helpText.textContent = 'รีเซ็ตการซูมแล้ว';
+            helpText.style.display = 'block';
+            setTimeout(() => {
+                helpText.style.display = 'none';
+                //helpText.textContent = 'ใช้ Scroll เมาส์เพื่อซูมเข้า/ออก • ดับเบิลคลิกเพื่อรีเซ็ต';
+            }, 2000);
+        });
+        
+        // ปุ่มควบคุมการซูм
+        zoomInBtn.addEventListener('click', function() {
+            const containerRect = modalImage.parentElement.getBoundingClientRect();
+            const centerX = containerRect.width / 2;
+            const centerY = containerRect.height / 2;
+            
+            // คำนวณจุดศูนย์กลางสัมพันธ์กับภาพ
+            const imageX = (centerX - posX) / scale;
+            const imageY = (centerY - posY) / scale;
+            
+            const newScale = Math.min(5, scale + 0.5);
+            
+            // คำนวณตำแหน่งใหม่เพื่อให้จุดศูนย์กลางคงที่
+            posX = centerX - imageX * newScale;
+            posY = centerY - imageY * newScale;
+            
+            scale = newScale;
+            applyTransform();
+            
+            // แสดงคำแนะนำ
+            //helpText.style.display = 'block';
+            setTimeout(() => {
+                helpText.style.display = 'none';
+            }, 2000);
+        });
+        
+        zoomOutBtn.addEventListener('click', function() {
+            const containerRect = modalImage.parentElement.getBoundingClientRect();
+            const centerX = containerRect.width / 2;
+            const centerY = containerRect.height / 2;
+            
+            // คำนวณจุดศูนย์กลางสัมพันธ์กับภาพ
+            const imageX = (centerX - posX) / scale;
+            const imageY = (centerY - posY) / scale;
+            
+            const newScale = Math.max(0.5, scale - 0.5);
+            
+            // คำนวณตำแหน่งใหม่เพื่อให้จุดศูนย์กลางคงที่
+            posX = centerX - imageX * newScale;
+            posY = centerY - imageY * newScale;
+            
+            scale = newScale;
+            applyTransform();
+            
+            // แสดงคำแนะนำ
+            //helpText.style.display = 'block';
+            setTimeout(() => {
+                helpText.style.display = 'none';
+            }, 2000);
+        });
+        
+        resetZoomBtn.addEventListener('click', function() {
+            scale = 1;
+            posX = 0;
+            posY = 0;
+            applyTransform();
+            
+            // แสดงคำแนะนำ
+            helpText.textContent = 'รีเซ็ตการซูมแล้ว';
+            helpText.style.display = 'block';
+            setTimeout(() => {
+                helpText.style.display = 'none';
+                //helpText.textContent = 'ใช้ Scroll เมาส์เพื่อซูมเข้า/ออก • ดับเบิลคลิกเพื่อรีเซ็ต';
+            }, 2000);
+        });
+        
+        // ตั้งค่าปุ่มปิด modal
+        closeModalBtn.addEventListener('click', function() {
+            closeModal();
+        });
+                
+        // ซ่อนคำแนะนำเมื่อเลื่อนเมาส์ออก
+        modalImage.addEventListener('mouseleave', function() {
+            helpText.style.display = 'none';
+        });
+        
+        // แสดงคำแนะนำเมื่อเมาส์อยู่เหนือภาพ
+        modalImage.addEventListener('mouseenter', function() {
+            if (scale > 1) {
+                //helpText.style.display = 'block';
+                setTimeout(() => {
+                    helpText.style.display = 'none';
+                }, 3000);
+            }
+        });
+        
+        // เมื่อ modal ถูกปิด
+        chartModal.addEventListener('hidden.bs.modal', function () {
+            // รีเซ็ตสถานะทั้งหมดเมื่อ modal ถูกปิด
+            scale = 1;
+            posX = 0;
+            posY = 0;
+            isDragging = false;
+            currentModal = null;
+            
+            // ตรวจสอบและลบ backdrop ถ้ายังคงอยู่
+            setTimeout(() => {
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                if (backdrops.length > 0) {
+                    backdrops.forEach(backdrop => {
+                        backdrop.parentNode.removeChild(backdrop);
+                    });
+                }
+                
+                // รีเซ็ต style ของ body เพื่อให้สามารถเลื่อนได้
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = 'auto';
+                document.body.style.paddingRight = '0';
+                document.body.style.position = 'static';
+            }, 100);
+        });
+
+        // ฟังก์ชันสำหรับปุ่มปิดใน header
+        document.querySelector('.modal-header .btn-close').addEventListener('click', function() {
+            closeModal();
+        });
+    });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/@panzoom/panzoom/dist/panzoom.min.js"></script>
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <script type="text/javascript">
+        // ตั้งค่าวันที่ปัจจุบัน
+        document.getElementById('current-date').textContent = new Date().toLocaleDateString('th-TH');
+        
+        // ตัวแปรเก็บ widget
+        let tvWidget = null;
+        
+        // ฟังก์ชันเริ่มต้นแสดงกราฟ
+        function initializeChart(symbol) {
+            if (tvWidget !== null) {
+                tvWidget.remove();
+            }
+            
+            tvWidget = new TradingView.widget({
+                "width": "1000",
+                "height": "500",
+                "symbol": symbol,
+                "interval": "W",
+                "timezone": "Etc/UTC",
+                "theme": "dark",
+                "style": "1",
+                "locale": "en",
+                "toolbar_bg": "#f1f3f6",
+                "enable_publishing": false,
+                "withdateranges": true,
+                "hide_side_toolbar": false,
+                "allow_symbol_change": true,
+                "container_id": "tradingview_chart"
+            });
+        }
+        
+        // เริ่มต้นด้วย AAPL
+        initializeChart("NASDAQ:AAPL");
+        
+        // เพิ่ม event listener ให้กับแต่ละ stock item
+        document.querySelectorAll('.stock-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // ลบ class active ออกจากทั้งหมด
+                document.querySelectorAll('.stock-item').forEach(el => {
+                    el.classList.remove('active');
+                });
+                
+                // เพิ่ม class active ให้กับ element ที่ถูกคลิก
+                this.classList.add('active');
+                
+                // เริ่มต้นกราฟใหม่ด้วย symbol ที่เลือก
+                const symbol = this.getAttribute('data-symbol');
+                initializeChart(symbol);
+            });
+        });
+    </script>
+</body>
+</html>

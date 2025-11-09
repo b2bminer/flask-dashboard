@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .btn-open {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .btn-open:hover {
+            background-color: #0056b3;
+        }
+        /* Modal Styling */
+        .modal {
+            display: none;
+            position: fixed;
+            background-color: white;
+        }
+        .modal-content {
+            font-size: 14px;
+            background: white;
+            border-radius: 10px;
+            width: 800px;
+            height: 100%;
+        }
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+        font-size: 13px; /* ลดขนาด label */
+        }
+        input {
+            font-size: 13px;
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100%;
+        }
+        button {
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            min-width: 150px;
+            height: 30px;
+            display: flex;
+            align-items: center;  /* จัดให้อยู่ตรงกลางแนวตั้ง */
+            justify-content: center; /* จัดให้อยู่ตรงกลางแนวนอน */
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .button-container {
+            display: flex; /* ใช้ Flexbox เพื่อให้ปุ่มอยู่ในแถวเดียวกัน */
+            gap: 5px; /* ระยะห่างระหว่างปุ่ม */
+        }
+        /* Work History Table */
+        .work-history-container {
+            grid-column: span 2;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 2px;
+            max-height: 130px;
+            overflow-y: auto;
+            background: #f9f9f9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .btn-add-row {
+            background-color: #007bff;
+        }
+        .btn-add-row:hover {
+            background-color: #0056b3;
+        }
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+            padding: 5px;
+            border: none;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        .btn-delete:hover {
+            background-color: #c82333;
+        }
+        .btn-add-row, .btn-delete, .saveDataBtn {
+        font-size: 10px;
+        padding: 3px;
+        border: none;
+    }
+    </style>
+</head>
+<body>
+    <div id="actionButtons">
+        <button class="btn-primary" onclick="openModal()">Create Employee</button>
+    </div>
+
+    <h2>Employee Personal Information</h2>
+    
+            <div id="employeeModal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeModal()">&times;</span>
+                    <h3 class="modal-header" id="modalTitle">Add New Employee</h3>
+                    <div class="form-container">
+                        <h2>สมัครสมาชิก</h2>
+                        <form id="dynamicForm" class="form-grid">
+                            <!-- ฟิลด์จะถูกเพิ่มที่นี่โดย JavaScript -->
+                        </form>
+                    </div>
+                                                
+                    <h3>Work History</h3>
+                    <div class="button-container">
+                        <button id="addRowBtn">Add Row</button>
+                        <button id="saveDataBtn">Save Changes</button>
+                    </div>
+                    <div class="work-history-container">
+                        <table id="workHistoryTable" class="data-grid">
+                            <thead>
+                                <tr>
+                                    <th>Company</th>
+                                    <th>Position</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workHistoryBody">
+                                <!-- Rows will be dynamically added here -->
+                            </tbody>
+                        </table>
+                    </div>
+            </div>
+
+    <script>
+        const fields = [
+            { "label": "ชื่อ", "type": "text", "id": "name", "position": "left" },
+            { "label": "อีเมล", "type": "email", "id": "email", "position": "right" },
+            { "label": "เบอร์โทร", "type": "tel", "id": "phone", "position": "left" },
+            { "label": "ที่อยู่", "type": "text", "id": "address", "position": "right" }
+        ];
+    
+        const form = document.getElementById("dynamicForm");
+    
+        fields.forEach(field => {
+            const div = document.createElement("div");
+            div.classList.add("form-group");
+    
+            if (field.position === "left") {
+                div.style.gridColumn = "1";  // อยู่ซ้าย
+            } else {
+                div.style.gridColumn = "2";  // อยู่ขวา
+            }
+    
+            const label = document.createElement("label");
+            label.innerText = field.label;
+            label.setAttribute("for", field.id);
+    
+            const input = document.createElement("input");
+            input.type = field.type;
+            input.id = field.id;
+    
+            div.appendChild(label);
+            div.appendChild(input);
+            form.appendChild(div);
+        });
+    
+        // เพิ่มปุ่ม Submit
+        const button = document.createElement("button");
+        button.type = "submit";
+        button.style.width = "150px";
+        button.innerText = "ส่งข้อมูล";
+        form.appendChild(button);
+
+        function openModal(employee = null) {
+            document.getElementById("employeeModal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("employeeModal").style.display = "none";
+        }
+
+        document.getElementById("addRowBtn").addEventListener("click", function() {
+            const tableBody = document.getElementById("workHistoryBody");
+            const newRow = document.createElement("tr");
+
+            newRow.innerHTML = `
+                <td><input type="text" name="company" placeholder="Company" required></td>
+                <td><input type="text" name="position" placeholder="Position" required></td>
+                <td><input type="date" name="startDate" required></td>
+                <td><input type="date" name="endDate"></td>
+                <td><button class="removeRowBtn">Remove</button></td>
+            `;
+            tableBody.appendChild(newRow);
+
+            // เพิ่ม event listener สำหรับปุ่ม Remove
+            newRow.querySelector(".removeRowBtn").addEventListener("click", function() {
+                tableBody.removeChild(newRow);
+            });
+        });
+
+    </script>
+             
+</body>
+</html>

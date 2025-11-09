@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Entry</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles_employee.css') }}">
+</head>
+<body>
+    <div>
+       <p>Employee Management</p>
+    </div>
+    <div>
+        <table id="employeeTable" border="1">
+            <thead>
+                <tr>
+                    <th>Name <div class="resize-handle"></div></th>
+                    <th>Email <div class="resize-handle"></div></th>
+                    <th>Actions <div class="resize-handle"></div></th>
+                </tr>
+            </thead>
+            <tbody id="employeeTableBody">
+                <!-- Employee data will be dynamically added here -->
+            </tbody>
+        </table>
+    </div>
+
+    <div id="footerControls">
+        <div id="paginationControls">
+            <button id="prevPageBtn" onclick="changePage(-1)">Previous</button>
+            <span id="pageInfo"></span>
+            <button id="nextPageBtn" onclick="changePage(1)">Next</button>
+        </div>
+        <div id="actionButtons">
+            <button class="btn-primary" onclick="openModal()">Create Employee</button>
+        </div>
+    </div>
+
+    <!-- The Modal -->
+    <div id="employeeModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h3 class="modal-header" id="modalTitle">Create Employee</h3>
+            <div class="cf">
+                <h2>Employee Personal Information</h2>
+                <form id="employeeForm">
+                    <input type="text" id="Id">
+                    <div class="fifth col-1">
+                        <label for="name">Full Name:</label>
+                        <input type="text" id="name" required>
+                    </div>
+                    <div class="fifth col-2">
+                        <label for="email">Email:</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="fifth col-3">
+                        <label for="phone">Phone:</label>
+                        <input type="tel" id="phone" required>
+                    </div>
+                    <div class="fifth col-4">
+                        <label for="address">Address:</label>
+                        <textarea id="address" required></textarea>
+                    </div>            
+                    <button type="submit" id="input-submit">Save Employee</button>
+                </form>
+            </div>
+            <h3>Work History</h3>
+            <div class="button-container">
+                <button id="addRowBtn">Add Row</button>
+                <button id="saveDataBtn">Save Changes</button>
+            </div>
+            <div class="work-history-container">
+                <table id="workHistoryTable" class="work-history-table">
+                    <thead>
+                        <tr>
+                            <th>Company</th>
+                            <th>Position</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="workHistoryBody">
+                        <!-- Rows will be dynamically added here -->
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+    
+    <script src="{{url_for('static', filename='script_employee.js')}}"></script>
+</body>
+</html>

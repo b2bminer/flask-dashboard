@@ -1,0 +1,546 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Stock Charts Gallery</title>
+        <style>
+            body {
+                margin: 0;
+                font-family: Arial, sans-serif;
+                background: #1a1a1a;
+                color: white;
+                overflow-x: hidden;
+            }
+            h1 {
+                text-align: center;
+                color: #fff;
+                margin: 30px 0;
+                font-size: 2.5em;
+                text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            }
+            
+            /* Stock List Styles */
+            .stock-list {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 15px;
+                padding: 20px;
+                max-width: 1200px;
+                margin: 0 auto 30px;
+            }
+            .stock-item {
+                background: #2a2a2a;
+                padding: 12px 25px;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-weight: bold;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+                border: 1px solid #444;
+            }
+            .stock-item:hover {
+                background: #3a3a3a;
+                transform: translateY(-3px);
+                box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            }
+            .stock-item.active {
+                background: #4a6fa5;
+                color: white;
+                border-color: #5a8fdf;
+            }
+            
+            .gallery {
+                display: flex;
+                flex-direction: column;
+                gap: 40px;
+                padding: 30px;
+                max-width: 1400px;
+                margin: 0 auto;
+                align-items: center;
+            }
+            .gallery-item {
+                position: relative;
+                overflow: hidden;
+                border-radius: 12px;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+                transition: all 0.3s ease;
+                background: #2a2a2a;
+                width: 100%;
+                max-width: 1200px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 30px;
+            }
+            .gallery-item:hover {
+                transform: translateY(-8px) scale(1.01);
+                box-shadow: 0 15px 35px rgba(255,255,255,0.1);
+                background: #333;
+            }
+            .gallery img {
+                width: 100%;
+                max-width: 1000px;
+                height: auto;
+                max-height: 2000px;
+                object-fit: contain;
+                cursor: zoom-in;
+                transition: transform 0.3s ease;
+                border-radius: 8px;
+            }
+            .gallery img:hover {
+                transform: scale(1.05);
+            }
+            .image-overlay {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: linear-gradient(transparent, rgba(0,0,0,0.8));
+                padding: 25px 20px 15px;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            .gallery-item:hover .image-overlay {
+                opacity: 1;
+            }
+            .image-info {
+                color: white;
+                font-size: 16px;
+                text-align: center;
+                font-weight: bold;
+            }
+
+            /* Modal Styles */
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0,0,0,0.98);
+                backdrop-filter: blur(10px);
+            }
+            .modal-content {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) scale(1);
+                max-width: 95%;
+                max-height: 95%;
+                transition: transform 0.3s ease;
+            }
+            .modal-image {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                border-radius: 12px;
+                box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            }
+            .close {
+                position: absolute;
+                top: 25px;
+                right: 35px;
+                font-size: 45px;
+                color: white;
+                cursor: pointer;
+                z-index: 1001;
+                background: rgba(255,0,0,0.7);
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.3s ease;
+                border: 2px solid white;
+            }
+            .close:hover {
+                background: rgba(255,0,0,0.9);
+                transform: rotate(90deg);
+            }
+            .controls {
+                position: absolute;
+                bottom: 30px;
+                left: 50%;
+                transform: translateX(-50%);
+                display: flex;
+                gap: 15px;
+                z-index: 1001;
+            }
+            .control-btn {
+                background: rgba(255,255,255,0.15);
+                color: white;
+                border: 2px solid rgba(255,255,255,0.3);
+                padding: 12px 20px;
+                border-radius: 8px;
+                cursor: pointer;
+                backdrop-filter: blur(15px);
+                transition: all 0.3s ease;
+                font-size: 16px;
+                font-weight: bold;
+            }
+            .control-btn:hover {
+                background: rgba(255,255,255,0.3);
+                border-color: rgba(255,255,255,0.6);
+                transform: translateY(-2px);
+            }
+            .zoom-info {
+                position: absolute;
+                top: 30px;
+                left: 30px;
+                background: rgba(0,0,0,0.6);
+                color: white;
+                padding: 8px 15px;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: bold;
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255,255,255,0.2);
+            }
+            
+            /* Responsive */
+            @media (max-width: 768px) {
+                .gallery {
+                    gap: 25px;
+                    padding: 20px;
+                }
+                .gallery-item {
+                    padding: 20px;
+                    max-width: 95%;
+                }
+                .close {
+                    top: 15px;
+                    right: 20px;
+                    width: 50px;
+                    height: 50px;
+                    font-size: 35px;
+                }
+                .controls {
+                    bottom: 20px;
+                    flex-wrap: wrap;
+                    justify-content: center;
+                }
+                .control-btn {
+                    padding: 10px 15px;
+                    font-size: 14px;
+                }
+            }
+
+            @media (max-width: 480px) {
+                .gallery {
+                    gap: 20px;
+                    padding: 15px;
+                }
+                .gallery-item {
+                    padding: 15px;
+                    max-width: 100%;
+                }
+                .image-overlay {
+                    padding: 20px 15px 10px;
+                }
+                .stock-list {
+                    gap: 10px;
+                    padding: 15px;
+                }
+                .stock-item {
+                    padding: 10px 15px;
+                    font-size: 14px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <h1>📸 Trading Charts Gallery</h1>
+        
+        <div class="stock-list">
+            <div class="stock-item active" data-stock="all">All Stocks</div>
+    <div class="stock-item" data-stock="AAV">AAV</div>
+<div class="stock-item" data-stock="AMATA">AMATA</div>
+<div class="stock-item" data-stock="BDMS">BDMS</div>
+<div class="stock-item" data-stock="CPF">CPF</div>
+<div class="stock-item" data-stock="EA">EA</div>
+<div class="stock-item" data-stock="GLOBAL">GLOBAL</div>
+<div class="stock-item" data-stock="HMPRO">HMPRO</div>
+<div class="stock-item" data-stock="IVL">IVL</div>
+<div class="stock-item" data-stock="JAS">JAS</div>
+<div class="stock-item" data-stock="PTT">PTT</div>
+<div class="stock-item" data-stock="RATCH">RATCH</div>
+<div class="stock-item" data-stock="SJWD">SJWD</div>
+<div class="stock-item" data-stock="STGT">STGT</div>
+<div class="stock-item" data-stock="TLI">TLI</div>
+<div class="stock-item" data-stock="TOP">TOP</div>
+<div class="stock-item" data-stock="VGI">VGI</div>
+<div class="stock-item" data-stock="WHA">WHA</div>
+</div>
+        <div class="gallery">
+<div class="gallery-item" data-stock="AAV">
+<img src="https://dl.dropboxusercontent.com/scl/fi/qkz91a1pxii61dyjgz70f/AAV_chart.png?rlkey=6qu3tru1chwxpofti6qsv0ep8&dl=0" alt="AAV Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="AMATA">
+<img src="https://dl.dropboxusercontent.com/scl/fi/kp718yvsinv9wlshuyr7p/AMATA_chart.png?rlkey=25hax2xnkq8weawnm4puse9y8&dl=0" alt="AMATA Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="BDMS">
+<img src="https://dl.dropboxusercontent.com/scl/fi/bvi7nj54wvs2ni2ic46k2/BDMS_chart.png?rlkey=7k7r8yabowqqliv8luhkfp1q8&dl=0" alt="BDMS Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="CPF">
+<img src="https://dl.dropboxusercontent.com/scl/fi/n1fhe2hnid67ogg1lw8nu/CPF_chart.png?rlkey=0gwvepacchbxa70fwe0hwiwp6&dl=0" alt="CPF Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="EA">
+<img src="https://dl.dropboxusercontent.com/scl/fi/3ryb85qn0x8wbcce3vsae/EA_chart.png?rlkey=d5m1vu3t7eh5waaslapju89xo&dl=0" alt="EA Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="GLOBAL">
+<img src="https://dl.dropboxusercontent.com/scl/fi/bbua3ztf56k44x4qcz7b0/GLOBAL_chart.png?rlkey=b7yquu1u1s7dwp13woc8vhuxa&dl=0" alt="GLOBAL Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="HMPRO">
+<img src="https://dl.dropboxusercontent.com/scl/fi/c36s8h532wws56to8lmdt/HMPRO_chart.png?rlkey=1zz2cey1v5dmj53nuxjwimzcw&dl=0" alt="HMPRO Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="IVL">
+<img src="https://dl.dropboxusercontent.com/scl/fi/9semhrxcqs8angpli3su4/IVL_chart.png?rlkey=dx70jbn23fvawzkk9aqjsfgeb&dl=0" alt="IVL Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="JAS">
+<img src="https://dl.dropboxusercontent.com/scl/fi/wqrt1bkpvydtw1l7vr0ma/JAS_chart.png?rlkey=1v1kh60s6zc1ef4j0xmq76dcs&dl=0" alt="JAS Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="PTT">
+<img src="https://dl.dropboxusercontent.com/scl/fi/gs2xvrywm30hlg4godctv/PTT_chart.png?rlkey=d76sd9r8yx7juqvfw9mrxt9nn&dl=0" alt="PTT Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="RATCH">
+<img src="https://dl.dropboxusercontent.com/scl/fi/zcukym6mw4l3fqy8qezkr/RATCH_chart.png?rlkey=a9ceh42yeoes2dj83hvdwuab4&dl=0" alt="RATCH Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="SJWD">
+<img src="https://dl.dropboxusercontent.com/scl/fi/afbofj0dwzkggrl4gacqh/SJWD_chart.png?rlkey=l6tf96h9u6viaf6hgs8kxbsgi&dl=0" alt="SJWD Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="STGT">
+<img src="https://dl.dropboxusercontent.com/scl/fi/tcxl7m4ulm13x1v052k9w/STGT_chart.png?rlkey=eq1l25600a7wpnlc30onfwpub&dl=0" alt="STGT Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="TLI">
+<img src="https://dl.dropboxusercontent.com/scl/fi/xwg7qg69hxt9v9dffdjyg/TLI_chart.png?rlkey=g4pfuz36v03j8p9sip6l1yck9&dl=0" alt="TLI Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="TOP">
+<img src="https://dl.dropboxusercontent.com/scl/fi/q88whtmg1wwn58h1w7w2i/TOP_chart.png?rlkey=1je8p7ukcykhsvu44m44bcgtu&dl=0" alt="TOP Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="VGI">
+<img src="https://dl.dropboxusercontent.com/scl/fi/j4u6klk928qmxcppd6a2g/VGI_chart.png?rlkey=xnisg6qkww1zq3vosaeewmrih&dl=0" alt="VGI Chart 1" onclick="openModal(this.src)">
+</div>
+<div class="gallery-item" data-stock="WHA">
+<img src="https://dl.dropboxusercontent.com/scl/fi/ojn1t9c33hafyaetmxkem/WHA_chart.png?rlkey=5yox1o1jibc5t1litke4cn3m8&dl=0" alt="WHA Chart 1" onclick="openModal(this.src)">
+</div>
+</div>
+
+        <div id="imageModal" class="modal">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div class="zoom-info" id="zoomInfo">100%</div>
+            <div class="modal-content" id="modalContent">
+                <img class="modal-image" id="modalImage" src="">
+            </div>
+            <div class="controls">
+                <button class="control-btn" onclick="zoomOut()">Zoom Out (-)</button>
+                <button class="control-btn" onclick="resetZoom()">Reset</button>
+                <button class="control-btn" onclick="zoomIn()">Zoom In (+)</button>
+            </div>
+        </div>
+
+        <script>
+            // Stock filtering functionality
+            document.querySelectorAll('.stock-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    // Update active state
+                    document.querySelectorAll('.stock-item').forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const stock = this.getAttribute('data-stock');
+                    filterStocks(stock);
+                });
+            });
+
+            function filterStocks(stock) {
+                const galleryItems = document.querySelectorAll('.gallery-item');
+                
+                galleryItems.forEach(item => {
+                    if (stock === 'all' || item.getAttribute('data-stock') === stock) {
+                        item.style.display = 'flex';
+                        
+                        // Scroll to the first item of the selected stock
+                        if (stock !== 'all') {
+                            const firstItem = document.querySelector(`.gallery-item[data-stock="${stock}"]`);
+                            if (firstItem) {
+                                firstItem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            }
+
+            // Modal functionality
+            let currentScale = 1;
+            const minScale = 0.1;
+            const maxScale = 5;
+            const scaleStep = 0.2;
+            let isDragging = false;
+            let startX, startY, initialX, initialY;
+            let currentX = 0, currentY = 0;
+
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            const modalContent = document.getElementById('modalContent');
+            const zoomInfo = document.getElementById('zoomInfo');
+
+            function openModal(src) {
+                modal.style.display = 'block';
+                modalImage.src = src;
+                resetZoomAndPosition();
+            }
+
+            function closeModal() {
+                modal.style.display = 'none';
+            }
+
+            function resetZoomAndPosition() {
+                currentScale = 1;
+                currentX = 0;
+                currentY = 0;
+                updateTransform();
+                updateZoomInfo();
+            }
+
+            function resetZoom() {
+                currentScale = 1;
+                currentX = 0;
+                currentY = 0;
+                updateTransform();
+                updateZoomInfo();
+            }
+
+            function zoomIn() {
+                if (currentScale < maxScale) {
+                    currentScale += scaleStep;
+                    updateTransform();
+                    updateZoomInfo();
+                }
+            }
+
+            function zoomOut() {
+                if (currentScale > minScale) {
+                    currentScale -= scaleStep;
+                    updateTransform();
+                    updateZoomInfo();
+                }
+            }
+
+            function updateTransform() {
+                modalContent.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
+            }
+
+            function updateZoomInfo() {
+                zoomInfo.textContent = Math.round(currentScale * 100) + '%';
+            }
+
+            // Mouse events for zoom and drag
+            modalContent.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -scaleStep : scaleStep;
+                const newScale = Math.min(maxScale, Math.max(minScale, currentScale + delta));
+                
+                if (newScale !== currentScale) {
+                    // Calculate mouse position relative to image
+                    const rect = modalContent.getBoundingClientRect();
+                    const mouseX = e.clientX - rect.left;
+                    const mouseY = e.clientY - rect.top;
+                    
+                    // Calculate the position change to keep the mouse point fixed
+                    const scaleChange = newScale / currentScale;
+                    currentX = mouseX - (mouseX - currentX) * scaleChange;
+                    currentY = mouseY - (mouseY - currentY) * scaleChange;
+                    
+                    currentScale = newScale;
+                    updateTransform();
+                    updateZoomInfo();
+                }
+            });
+
+            // Mouse events for dragging
+            modalContent.addEventListener('mousedown', (e) => {
+                if (currentScale > 1) {
+                    isDragging = true;
+                    startX = e.clientX - currentX;
+                    startY = e.clientY - currentY;
+                    modalContent.style.cursor = 'grabbing';
+                }
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                e.preventDefault();
+                currentX = e.clientX - startX;
+                currentY = e.clientY - startY;
+                updateTransform();
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                modalContent.style.cursor = 'grab';
+            });
+
+            // Touch events for mobile
+            modalContent.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1 && currentScale > 1) {
+                    isDragging = true;
+                    startX = e.touches[0].clientX - currentX;
+                    startY = e.touches[0].clientY - currentY;
+                }
+            });
+
+            document.addEventListener('touchmove', (e) => {
+                if (!isDragging || e.touches.length !== 1) return;
+                
+                e.preventDefault();
+                currentX = e.touches[0].clientX - startX;
+                currentY = e.touches[0].clientY - startY;
+                updateTransform();
+            });
+
+            document.addEventListener('touchend', () => {
+                isDragging = false;
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (modal.style.display === 'block') {
+                    switch(e.key) {
+                        case 'Escape':
+                            closeModal();
+                            break;
+                        case '+':
+                        case '=':
+                            zoomIn();
+                            break;
+                        case '-':
+                            zoomOut();
+                            break;
+                        case '0':
+                            resetZoom();
+                            break;
+                    }
+                }
+            });
+
+            // Close modal when clicking outside image
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+
+            // Initialize cursor style
+            modalContent.style.cursor = 'grab';
+        </script>
+    </body>
+    </html>
+    

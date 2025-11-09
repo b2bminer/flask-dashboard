@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Entry</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles_employee.css') }}">
+</head>
+<body>
+
+    <h2>Employee Personal Information</h2>
+
+    <form id="employeeForm">
+        <label for="name">Full Name:</label>
+        <input type="text" id="name" required>
+
+        <label for="email">Email:</label>
+        <input type="email" id="email" required>
+
+        <label for="phone">Phone:</label>
+        <input type="tel" id="phone" required>
+
+        <label for="address">Address:</label>
+        <textarea id="address" required></textarea>
+
+        <button type="submit">Save Employee</button>
+    </form>
+
+    <h2>Work History</h2>
+    <button id="addWorkBtn">Add Work History</button>
+
+    <table id="workHistoryTable">
+        <thead>
+            <tr>
+                <th>Company</th>
+                <th>Position</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <!-- Work History Modal -->
+    <div id="workHistoryModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Add Work History</h3>
+            <label for="company">Company:</label>
+            <input type="text" id="company" required>
+
+            <label for="position">Position:</label>
+            <input type="text" id="position" required>
+
+            <label for="startDate">Start Date:</label>
+            <input type="date" id="startDate" required>
+
+            <label for="endDate">End Date:</label>
+            <input type="date" id="endDate">
+
+            <button id="saveWorkHistory">Save</button>
+        </div>
+    </div>
+
+    <script src="{{url_for('static', filename='script_employee.js')}}"></script>
+</body>
+</html>

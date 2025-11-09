@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase JavaScript Test</title>
+    <style>
+    </style>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+</head>
+<body>
+
+    <p>User Management</p>
+    <table id="userTable" border="1">
+        <thead>
+            <tr>
+                <th>Name <div class="resize-handle"></div></th>
+                <th>Email <div class="resize-handle"></div></th>
+                <th>Actions <div class="resize-handle"></div></th>
+            </tr>
+        </thead>
+        <tbody id="usersTableBody">
+            <!-- User data will be dynamically added here -->
+        </tbody>
+    </table>
+
+    <div id="footerControls">
+        <div id="paginationControls">
+            <button id="prevPageBtn" onclick="changePage(-1)">Previous</button>
+            <span id="pageInfo"></span>
+            <button id="nextPageBtn" onclick="changePage(1)">Next</button>
+        </div>
+        <div id="actionButtons">
+            <button class="btn-primary" onclick="openModal()">Create User</button>
+            <button class="btn-secondary" onclick="fetchUsers()">Get Users</button>
+        </div>
+    </div>
+    
+    <!-- The Modal -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            
+            <h3 class="modal-header" id="modalTitle">Add New User</h3>
+            <input type="hidden" id="userId">  <!-- Hidden field to store user ID -->
+            <input type="text" id="userName" placeholder="Enter Name"><br><br>
+            <input type="email" id="userEmail" placeholder="Enter Email"><br><br>
+            <button class="btn-primary" onclick="addUser()">Submit</button>
+            <button class="btn-danger" onclick="closeModal()">Cancel</button>
+            <button onclick="insertUser()">Add User.Js</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    
+        // Replace with your actual Supabase project details
+        const SUPABASE_URL = "https://fkjsplyswcxdwlepogrp.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZranNwbHlzd2N4ZHdsZXBvZ3JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA5Mjg5MjMsImV4cCI6MjA1NjUwNDkyM30.tNEOmwO-xKELMjrNDKYZtAJh9oqwgIzxnAjtQIKiIwQ";
+    
+        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ✅ Function to Insert a New User
+        async function insertUser() {
+            const name = document.getElementById("userName").value;
+            const email = document.getElementById("userEmail").value;
+
+            if (!name || !email) {
+                alert("Please enter both Name and Email.");
+                return;
+            }
+
+            let { data, error } = await supabase.from('users').insert([{ name, email }]);
+
+            if (error) {
+                console.error("Error inserting user:", error);
+                alert("Failed to add user.");
+                return;
+            }
+
+            alert("User added successfully!");
+            document.getElementById("name").value = "";  // Clear form
+            document.getElementById("email").value = "";
+            fetchUsers(); // Refresh user list
+        }
+
+        // ✅ Fix: Make the function accessible globally
+        window.insertUser = insertUser;
+
+    </script>
+
+    <script>
+        function openModal(user = null) {
+            if (user) {
+                document.getElementById("modalTitle").textContent = "Edit User";
+                document.getElementById("userId").value = user.id;
+                document.getElementById("userName").value = user.name;
+                document.getElementById("userEmail").value = user.email;
+            } else {
+                document.getElementById("modalTitle").textContent = "Add New User";
+                document.getElementById("userId").value = "";
+                document.getElementById("userName").value = "";
+                document.getElementById("userEmail").value = "";
+            }
+            document.getElementById("userModal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("userModal").style.display = "none";
+        }
+
+        function addUser() {
+            const userId = document.getElementById("userId").value;
+            const name = document.getElementById("userName").value;
+            const email = document.getElementById("userEmail").value;
+            const isEditing = userId !== "";
+
+            const apiUrl = isEditing ? "http://localhost:5000/edit_supabase_user" : "http://localhost:5000/add_supabase_user";
+            const requestData = isEditing ? { id: userId, name, email } : { name, email };
+
+            if (!validateForm(name, email)) {
+                return;
+            }
+
+            fetch(apiUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(result => {
+                alert(result.message || result.error);
+                if (result.message) {
+                    closeModal();
+                    fetchUsers(); // Refresh user list
+                }
+            })
+            .catch(error => alert("Error: " + error.message));
+        }
+
+        function validateForm(name, email) {
+            if (!name.trim()) {
+                alert("Name is required!");
+                return false;
+            }
+
+            // Basic email validation using regex
+            const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailPattern.test(email)) {
+                alert("Please enter a valid email address!");
+                return false;
+            }
+
+            return true;
+        }
+
+        function deleteUser(userId) {
+            const apiUrl = "http://localhost:5000/delete_supabase_user";
+            
+            if (confirm("Are you sure you want to delete this user?")) {
+                fetch(apiUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id: userId })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message || result.error);
+                    fetchUsers(); // Refresh the user list
+                })
+                .catch(error => {
+                    alert("Request failed: " + error.message);
+                });
+            }
+        }
+
+        function displayMessage(message, type) {
+            const msgElement = document.getElementById("message");
+            msgElement.textContent = message;
+            msgElement.className = type; // "success" or "error"
+        }
+
+        // Function to fetch users from Supabase
+        async function fetchUsersJs() {
+            let { data, error } = await supabase.from('users').select('*');
+    
+            if (error) {
+                console.error("Error fetching users:", error);
+                return;
+            }
+    
+            // Display users in the HTML page
+            let userList = document.getElementById("userList");
+            userList.innerHTML = ""; // Clear existing list
+    
+            data.forEach(user => {
+                let li = document.createElement("li");
+                li.textContent = `${user.id}: ${user.name} (${user.email})`;
+                const deleteBtn = document.createElement("button");
+                deleteBtn.textContent = "Delete";
+                deleteBtn.onclick = function() {
+                    deleteUser(user.id);
+                };
+
+                li.appendChild(deleteBtn);
+                userList.appendChild(li);
+            });
+        }
+
+        let currentPage = 1;
+        const usersPerPage = 10;
+        let totalUsers = 0;
+        let allUsers = [];
+
+        function fetchUsers() {
+            fetch("/get_supabase_users")
+            .then(response => response.json())
+            .then(data => {
+                allUsers = data;
+                totalUsers = data.length;
+                renderTable();
+            })
+            .catch(error => alert("Error fetching users: " + error.message));
+        }
+
+        function renderTable() {
+            const tableBody = document.getElementById("usersTableBody");
+            tableBody.innerHTML = ""; // Clear previous data
+
+            const startIndex = (currentPage - 1) * usersPerPage;
+            const endIndex = startIndex + usersPerPage;
+            const usersToShow = allUsers.slice(startIndex, endIndex);
+
+            usersToShow.forEach(user => {
+                const row = document.createElement("tr");
+
+                // Name column
+                const nameCell = document.createElement("td");
+                nameCell.textContent = user.name;
+
+                // Email column
+                const emailCell = document.createElement("td");
+                emailCell.textContent = user.email;
+
+                // Actions column
+                const actionsCell = document.createElement("td");
+
+                // Edit button
+                const editBtn = document.createElement("button");
+                editBtn.textContent = "Edit";
+                editBtn.classList.add("action-btn", "edit-btn");
+                editBtn.onclick = function() {
+                    openModal(user);
+                };
+
+                // Delete button
+                const deleteBtn = document.createElement("button");
+                deleteBtn.textContent = "Delete";
+                deleteBtn.classList.add("action-btn", "delete-btn");
+                deleteBtn.onclick = function() {
+                    deleteUser(user.id);
+                };
+
+                actionsCell.appendChild(editBtn);
+                actionsCell.appendChild(deleteBtn);
+
+                // Append cells to row
+                row.appendChild(nameCell);
+                row.appendChild(emailCell);
+                row.appendChild(actionsCell);
+
+                // Append row to table
+                tableBody.appendChild(row);
+            });
+
+            updatePaginationButtons();
+        }
+
+        function updatePaginationButtons() {
+            document.getElementById("pageInfo").textContent = `Page ${currentPage} of ${Math.ceil(totalUsers / usersPerPage)}`;
+            document.getElementById("prevPageBtn").disabled = currentPage === 1;
+            document.getElementById("nextPageBtn").disabled = currentPage * usersPerPage >= totalUsers;
+        }
+
+        function changePage(step) {
+            currentPage += step;
+            renderTable();
+        }
+
+        window.onload = function () {
+            fetchUsers();
+        };
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const tableHeaders = document.querySelectorAll("#userTable th");
+
+            tableHeaders.forEach((th) => {
+                const resizer = th.querySelector(".resize-handle");
+                let startX, startWidth;
+
+                if (resizer) {
+                    resizer.addEventListener("mousedown", (event) => {
+                        startX = event.pageX;
+                        startWidth = th.offsetWidth;
+                        document.addEventListener("mousemove", resizeColumn);
+                        document.addEventListener("mouseup", stopResizing);
+                    });
+
+                    function resizeColumn(event) {
+                        const newWidth = startWidth + (event.pageX - startX);
+                        th.style.width = newWidth + "px";
+                    }
+
+                    function stopResizing() {
+                        document.removeEventListener("mousemove", resizeColumn);
+                        document.removeEventListener("mouseup", stopResizing);
+                    }
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>

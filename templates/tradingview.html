@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>SET Stock Chart (TradingView Style)</title>
+    <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles_tradingview.css') }}">
+</head>
+<body>
+    <div id="app-wrapper">
+        <header class="chart-header">
+            
+            <div class="chart-controls">
+                <!-- ส่วน Input และปุ่ม Load -->
+                <div class="control-section">
+                    <input type="text" id="symbol" placeholder="Symbol" value="PTT.BK">
+                    <button onclick="loadChart()">Load</button>
+                </div>
+                
+                <div id="ema-controls" style="position: absolute; top: 60px; left: 0px; padding: 2px; border: 1px solid #ddd; z-index: 100; display: flex; align-items: center; gap: 5px;">
+                    <!-- ส่วนแสดงข้อมูล EMA -->
+                    <div id="ema-info" style="display: flex; gap: 5px;">
+                        <div style="color: #1E90FF; min-width: 100px;"><b>EMA 5</b>: <span id="ema5-value">-</span></div>
+                        <div style="color: #FF8C00; min-width: 100px;"><b>EMA 20</b>: <span id="ema20-value">-</span></div>
+                        <div style="color: #ffffff; min-width: 60px;"><b>O</b>: <span id="open-value">-</span></div>
+                        <div style="color: #ffffff; min-width: 60px;"><b>H</b>: <span id="high-value">-</span></div>
+                        <div style="color: #ffffff; min-width: 60px;"><b>L</b>: <span id="low-value">-</span></div>
+                        <div style="color: #ffffff; min-width: 60px;"><b>C</b>: <span id="close-value">-</span></div>
+                        <div style="color: #f2eb18; min-width: 100px;"><b>V</b>: <span id="volume-value">-</span></div>
+                        <div style="color: #f2eb18; min-width: 100px;"><b>VA</b>: <span id="volume-ma-value">-</span></div>
+                    </div>        
+                    <!-- ปุ่ม Toggle EMA -->
+                    <button id="toggle-ema-btn" onclick="toggleEMA()" style="padding: 2px 2px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                        Hide
+                    </button>
+                </div>
+            </div>
+
+            <div class="control-group">            
+                <!-- ปุ่ม Timeframe -->
+                <div class="control-section timeframe-controls">
+                    <button class="timeframe-btn" onclick="changeTimeframe('15m')">15m</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe('1h')">1h</button>
+                    <button class="timeframe-btn active" onclick="changeTimeframe('1D')">1D</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe('1W')">1W</button>
+                    <button class="timeframe-btn" onclick="changeTimeframe('1M')">1M</button>
+                </div>
+                
+                <!-- ปุ่มควบคุมกราฟ -->
+                <div class="control-section">
+                    <button class="control-btn active" id="zoom-btn" title="Zoom Mode">Zoom</button>
+                    <button class="control-btn" id="pan-btn" title="Pan Mode">Pan</button>
+                    <button class="control-btn" onclick="resetChart()" title="Reset">Reset</button>
+                    <button id="fullscreen-btn" title="Toggle Fullscreen" style="padding: 5px 10px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                        <i class="fas fa-expand"></i> Fullscreen
+                    </button>
+                </div>
+            </div>
+            <div class="theme-controls">
+                <button id="light-theme-btn" class="theme-btn active">Light</button>
+                <button id="dark-theme-btn" class="theme-btn">Dark</button>
+            </div>
+        </header>
+        <div id="chart-container" style="display: flex; flex-direction: column; height: 100%; gap: 0;">
+            <div id="chart" style="flex: 1; min-height: 300px;"></div>
+            <div id="volume-chart" style="flex: 1; min-height: 100px;"></div>
+                    <div id="drag-overlay"></div>
+        </div>
+
+    </div>
+
+    <script>
+
+    const container = document.getElementById('chart-container');
+    
+    const width = container.clientWidth;
+    const height = Math.max(300, container.clientHeight * 0.7); // ขั้นต่ำ 300px
+    
+        //const width = document.getElementById("chart").clientWidth;
+
+        const chart = LightweightCharts.createChart(document.getElementById("chart"), {
+            width: width,
+            height: height,
+            layout: {
+                background: { color: '#FFFFFF' },
+                textColor: '#D9D9D9',
+            },
+            grid: {
+                vertLines: { color: '#eee' },
+                horzLines: { color: '#eee' },
+            },
+            timeScale: {
+                timeVisible: true,
+                secondsVisible: false,
+                borderColor: '#cccccc',
+            },
+            handleScroll: {
+                mouseWheel: true,
+                pressedMouseMove: true,
+            },
+            handleScale: {
+                axisPressedMouseMove: true,
+                mouseWheel: true,
+                pinch: true,
+            }
+        });
+
+        const candleSeries = chart.addCandlestickSeries({
+            upColor: '#00C805',
+            downColor: '#FF0000',
+            borderUpColor: '#00C805',
+            borderDownColor: '#FF0000',
+            wickUpColor: '#003300',
+            wickDownColor: '#660000',
+            borderVisible: true,
+            thinBars: false,
+        });
+        candleSeries.applyOptions({
+            borderUpColor: '#00C805',
+            borderDownColor: '#FF0000',
+            borderVisible: true,
+            borderWidth: 2,
+        });
+
+        // สีน้ำเงินต่างๆ ที่นิยมใช้
+        const blueColors = {
+            dodgerBlue: '#1E90FF',
+            royalBlue: '#4169E1',
+            steelBlue: '#4682B4',
+            deepSkyBlue: '#00BFFF',
+            cornflowerBlue: '#6495ED',
+            mediumBlue: '#0000CD',
+            darkBlue: '#00008B'
+        };
+        // สร้าง series สำหรับ EMA
+        const ema5Series = chart.addLineSeries({
+            color: blueColors.darkBlue, // สีน้ำเงิน
+            lineWidth: 1,
+            //title: 'EMA 5',
+            crosshairMarkerVisible: false,
+            crosshairMarkerRadius: 4,
+            crosshairMarkerBorderColor: '#1E90FF',
+            crosshairMarkerBackgroundColor: '#FFFFFF',
+            priceLineVisible: false, // ปิด price line ด้านขวากราฟ (ถ้าไม่ต้องการ)
+            lastValueVisible: false
+        });
+
+        const ema20Series = chart.addLineSeries({
+            color: '#FF8C00', // สีส้มเข้ม
+            lineWidth: 1,
+            //title: 'EMA 20',
+            crosshairMarkerVisible: false,
+            priceLineVisible: false, // ปิด price line ด้านขวากราฟ (ถ้าไม่ต้องการ)
+            lastValueVisible: false
+        });
+
+        const volumeChart = LightweightCharts.createChart(document.getElementById('volume-chart'), {
+            width: width,
+            height: Math.max(100, container.clientHeight * 0.3), // ขั้นต่ำ 100px
+            timeScale: {
+            visible: false,
+            borderVisible: false,
+            },
+            //crossHair: { mode: LightweightCharts.CrossHairMode.Normal },
+            layout: { backgroundColor: '#fff', textColor: '#000', fontSize: 9 },
+        });
+        const volumeSeries = volumeChart.addHistogramSeries({
+            color: '#26a69a',
+            priceFormat: { type: 'volume' },
+            lastValueVisible: false, // 👈 ซ่อนค่าบาร์ล่าสุดบนแกนขวา
+            //priceScaleId: '',
+            scaleMargins: { top: 0.1, bottom: 0 },
+        });
+        // สร้างเส้นค่าเฉลี่ยปริมาณ
+        const volumeMASeries = volumeChart.addLineSeries({
+            color: '#FFA500', // สีส้ม
+            lineWidth: 1,
+            title: '',
+            crosshairMarkerVisible: false,
+            lastValueVisible: false, // 👈 ซ่อนค่าบาร์ล่าสุดบนแกนขวา
+            //priceScaleId: '',
+            scaleMargins: { top: 0.1, bottom: 0 },
+        });
+
+        let currentTimeframe = '1D';
+        let currentSymbol = 'PTT.BK';
+        let currentVisibleRange = null;
+
+        loadChart();
+
+        function loadChart() {
+            currentSymbol = document.getElementById("symbol").value;
+            updateTimeframeButtons();
+            loadData(currentTimeframe);
+        }
+
+        function changeTimeframe(tf) {
+            currentTimeframe = tf;
+            updateTimeframeButtons();
+            
+            // ถ้าเปลี่ยนจาก timeframe ใหญ่ไปเล็ก ให้โหลดเฉพาะช่วงเวลาที่เห็นอยู่
+            if (isLargerToSmallerTimeframe(currentTimeframe, tf)) {
+                const range = chart.timeScale().getVisibleRange();
+                loadData(tf, range.from, range.to);
+            } else {
+                loadData(tf);
+            }
+        }
+
+        function isLargerToSmallerTimeframe(oldTf, newTf) {
+            const tfOrder = ['1mo', '1wk', '1d', '15m'];
+            return tfOrder.indexOf(oldTf) < tfOrder.indexOf(newTf);
+        }
+
+        function updateTimeframeButtons() {
+            document.querySelectorAll('.timeframe-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.toLowerCase() === currentTimeframe.toLowerCase()) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+
+        let data = [];
+        let volumeWithMA = [];
+        let ema5Data,ema20Data = [];
+
+        function loadData(tf, from = null, to = null) {
+            let url = `/tradingviewdata?symbol=${currentSymbol}&timeframe=${tf}`;
+            if (from && to) {
+                url += `&from=${from}&to=${to}`;
+            }
+
+            fetch(url)
+                .then(res => res.json())
+                .then(response  => {
+                    currentTimeframe = tf;
+                    data = response;
+                    // แปลงข้อมูล EMA
+                    ema5Data = data.map(item => ({
+                        time: item.time,
+                        value: item.ema5
+                    }));
+                    
+                    ema20Data = data.map(item => ({
+                        time: item.time,
+                        value: item.ema20
+                    }));
+
+                    const volumeData = data.map(item => ({
+                    //time: new Date(item.time).getTime() / 1000,
+                    time: item.time,  // <<< ใช้ time เดียวกันกับ candle
+                    value: item.volume,
+                    color: item.close > item.open ? '#00FF00' : '#FF0000',
+                    }));
+
+                    volumeWithMA = calculateVolumeMA(data, 20);
+                    volumeMASeries.setData(volumeWithMA.map(item => ({
+                        time: item.time,
+                        value: item.volumeMA
+                    })));
+
+                    candleSeries.setData(data);
+                    volumeSeries.setData(volumeData);
+                    ema5Series.setData(ema5Data);
+                    ema20Series.setData(ema20Data);
+                    chart.timeScale().fitContent();
+                    volumeChart.timeScale().fitContent();
+
+                    // เชื่อม TimeScale ให้เลื่อนพร้อมกัน
+                    chart.timeScale().subscribeVisibleTimeRangeChange(timeRange => {
+                        volumeChart.timeScale().setVisibleRange(timeRange);
+                    });
+
+                    volumeChart.timeScale().subscribeVisibleTimeRangeChange(timeRange => {
+                        chart.timeScale().setVisibleRange(timeRange);
+                    });
+
+                });
+        }
+
+
+        // ฟังก์ชันคำนวณค่าเฉลี่ยปริมาณ
+        function calculateVolumeMA(data, period) {
+        return data.map((item, index) => {
+            if (index >= period - 1) {
+            const sum = data
+                .slice(index - period + 1, index + 1)
+                .reduce((acc, val) => acc + val.volume, 0);
+            return {
+                ...item,
+                volumeMA: sum / period
+            };
+            }
+            return {
+            ...item,
+            volumeMA: null
+            };
+        }).filter(item => item.volumeMA !== null);
+        }
+
+        function updateInfo(time) {
+            const bar = data.find(d => d.time === time);
+            const ema5 = ema5Data.find(d => d.time === time);
+            const ema20 = ema20Data.find(d => d.time === time);
+            const ma = volumeWithMA.find(d => d.time === time);
+            if (!bar) return;
+            document.getElementById('open-value').textContent = bar.open.toFixed(2);
+            document.getElementById('high-value').textContent = bar.high.toFixed(2);
+            document.getElementById('low-value').textContent = bar.low.toFixed(2);
+            document.getElementById('close-value').textContent = bar.close.toFixed(2);
+            document.getElementById('volume-value').textContent = bar.volume.toLocaleString();
+            document.getElementById('volume-ma-value').textContent = ma ? ma.volumeMA.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-';
+            document.getElementById('ema5-value').textContent = ema5 ? ema5.value.toFixed(2) : '-';
+            document.getElementById('ema20-value').textContent = ema20 ? ema20.value.toFixed(2) : '-';
+        }
+
+        // อัปเดต Legend เมื่อเมาส์เคลื่อนที่
+        chart.subscribeCrosshairMove(param => {
+            if (param.time && param.point) {
+                updateInfo(param.time);
+                volumeChart.setCrosshairPosition(param.point.x, 0);
+            }
+        });
+
+        volumeChart.subscribeCrosshairMove(param => {
+            if (param.time && param.point) {
+                updateInfo(param.time);
+                chart.setCrosshairPosition(param.point.x, 0);
+            }
+        });
+
+
+
+        let emaVisible = true;
+
+        function toggleEMA() {
+            emaVisible = !emaVisible;
+            
+            // ซ่อนหรือแสดงเส้น EMA
+            ema5Series.applyOptions({ visible: emaVisible });
+            ema20Series.applyOptions({ visible: emaVisible });
+            
+            // เปลี่ยนข้อความปุ่ม
+            document.getElementById('toggle-ema-btn').textContent = emaVisible ? 'Hide' : 'Show';
+            
+            // ซ่อนหรือแสดงข้อมูลใน Legend
+            document.getElementById('ema-info').style.display = emaVisible ? 'flex' : 'none';
+        }
+
+        // การซูมด้วยการลากเมาส์
+        const chartDiv = document.getElementById("chart");
+        const overlay = document.getElementById("drag-overlay");
+        let isDragging = false;
+        let dragStartX = 0;
+
+        // เพิ่มตัวแปรเก็บสถานะโหมด
+        let currentMode = 'zoom'; // 'zoom' หรือ 'pan'
+
+        // ฟังก์ชันเปลี่ยนโหมด
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`${mode}-btn`).classList.add('active');
+            
+            // ปรับการทำงานของกราฟตามโหมด
+            chart.applyOptions({
+                handleScroll: {
+                    mouseWheel: true,
+                    pressedMouseMove: mode === 'pan',
+                },
+                handleScale: {
+                    axisPressedMouseMove: mode === 'zoom',
+                        mouseWheel: true,
+                        pinch: true,
+                    }
+                });
+        }
+
+        // ฟังก์ชันรีเซ็ตกราฟ
+        function resetChart() {
+            chart.timeScale().fitContent();
+            volumeChart.timeScale().fitContent();
+        }
+
+        // เริ่มต้นตั้งค่าโหมด
+        setMode('zoom');
+
+        // การจัดการการลากเมาส์
+        chartDiv.addEventListener("mousedown", (e) => {
+            if (currentMode !== 'zoom') return;
+            isDragging = true;
+            dragStartX = e.offsetX;
+            overlay.style.left = `${dragStartX}px`;
+            overlay.style.width = `0px`;
+            overlay.style.display = "block";
+        });
+
+        chartDiv.addEventListener("mousemove", (e) => {
+            if (!isDragging) return;
+            const currentX = e.offsetX;
+            const left = Math.min(dragStartX, currentX);
+            const width = Math.abs(currentX - dragStartX);
+            overlay.style.left = `${left}px`;
+            overlay.style.width = `${width}px`;
+        });
+
+        chartDiv.addEventListener("mouseup", (e) => {
+            if (!isDragging || currentMode !== 'zoom') return;
+            isDragging = false;
+            overlay.style.display = "none";
+
+            const dragEndX = e.offsetX;
+            if (Math.abs(dragEndX - dragStartX) < 10) return;
+
+            const fromTime = chart.timeScale().coordinateToTime(Math.min(dragStartX, dragEndX));
+            const toTime = chart.timeScale().coordinateToTime(Math.max(dragStartX, dragEndX));
+            
+            chart.timeScale().setVisibleRange({ from: fromTime, to: toTime });
+        });
+
+        // เพิ่ม Event Listener สำหรับปุ่ม
+        document.getElementById("zoom-btn").addEventListener("click", () => setMode('zoom'));
+        document.getElementById("pan-btn").addEventListener("click", () => setMode('pan'));
+
+
+        function setTheme(isDark) {
+            // ตั้งค่าธีมของหน้าเว็บ
+            document.body.className = isDark ? 'dark-theme' : 'light-theme';
+            
+            // ตั้งค่ากราฟใหม่ทั้งหมด
+            const chartOptions = {
+            layout: {
+                background: { color: isDark ? '#121212' : '#FFFFFF' },
+                textColor: isDark ? '#D9D9D9' : '#333333',
+            },
+                grid: {
+                    vertLines: { 
+                        color: isDark ? '#2B2B43' : '#EEEEEE',
+                        visible: true
+                    },
+                    horzLines: { 
+                        color: isDark ? '#2B2B43' : '#EEEEEE',
+                        visible: true
+                    }
+                },
+                crosshair: {
+                    vertLine: {
+                        color: isDark ? '#D9D9D9' : '#333333',
+                        labelBackgroundColor: isDark ? '#1E222D' : '#FFFFFF'
+                    },
+                    horzLine: {
+                        color: isDark ? '#D9D9D9' : '#333333',
+                        labelBackgroundColor: isDark ? '#1E222D' : '#FFFFFF'
+                    }
+                },
+                rightPriceScale: {
+                    borderColor: isDark ? '#2B2B43' : '#EEEEEE'
+                },
+                timeScale: {
+                    borderColor: isDark ? '#2B2B43' : '#EEEEEE'
+                }
+            };
+            
+            // ใช้ applyOptions เพื่ออัปเดตการตั้งค่าทั้งหมด
+            chart.applyOptions(chartOptions);
+            volumeChart.applyOptions(chartOptions);
+            
+            // อัปเดตสีเส้น EMA
+            ema5Series.applyOptions({
+                color: isDark ? '#1E90FF' : '#2962FF',
+                priceLineColor: isDark ? 'rgba(30, 144, 255, 0.3)' : 'rgba(41, 98, 255, 0.3)'
+            });
+            
+            ema20Series.applyOptions({
+                color: isDark ? '#FF8C00' : '#FF6D00',
+                priceLineColor: isDark ? 'rgba(255, 140, 0, 0.3)' : 'rgba(255, 109, 0, 0.3)'
+            });
+            
+            // อัปเดตสีแท่งเทียน
+            candleSeries.applyOptions({
+                upColor: isDark ? '#00FF00' : '#089981',
+                downColor: isDark ? '#FF0000' : '#f23645',
+                borderUpColor: isDark ? '#00FF00' : '#089981',
+                borderDownColor: isDark ? '#FF0000' : '#f23645',
+                wickUpColor: isDark ? '#00FF00' : '#089981',
+                wickDownColor: isDark ? '#FF0000' : '#f23645',
+                borderVisible: true
+            });
+
+            // อัปเดตสีตัวอักษรใน ema-controls
+            const emaInfo = document.getElementById('ema-info');
+            if (emaInfo) {
+                const textColor = isDark ? '#FFFFFF' : '#000000';  // สีฟอนต์หลัก
+                const yellowColor = isDark ? '#f2eb18' : '#ccaa00'; // สีฟอนต์ปริมาณ (V, VA)
+
+                emaInfo.querySelector('#open-value').parentElement.style.color = textColor;
+                emaInfo.querySelector('#high-value').parentElement.style.color = textColor;
+                emaInfo.querySelector('#low-value').parentElement.style.color = textColor;
+                emaInfo.querySelector('#close-value').parentElement.style.color = textColor;
+
+                emaInfo.querySelector('#volume-value').parentElement.style.color = yellowColor;
+                emaInfo.querySelector('#volume-ma-value').parentElement.style.color = yellowColor;
+            }
+
+            // อัปเดตสถานะปุ่ม
+            document.getElementById('light-theme-btn').classList.toggle('active', !isDark);
+            document.getElementById('dark-theme-btn').classList.toggle('active', isDark);
+            
+            // บันทึกการตั้งค่า
+            localStorage.setItem('chartTheme', isDark ? 'dark' : 'light');
+            
+            // รีเฟรชกราฟเพื่อให้การเปลี่ยนแปลงมีผล
+            chart.timeScale().fitContent();
+            volumeChart.timeScale().fitContent();
+
+        }
+
+        // อ่านค่าธีมจาก localStorage เมื่อโหลดหน้า
+        const savedTheme = localStorage.getItem('chartTheme') || 'light';
+        setTheme(savedTheme === 'dark');
+
+
+        // Event Listeners สำหรับปุ่ม
+        document.getElementById('light-theme-btn').addEventListener('click', () => setTheme(false));
+        document.getElementById('dark-theme-btn').addEventListener('click', () => setTheme(true));
+        //setTheme(isDarkMode);
+
+        // ตั้งค่า time scale ให้ทั้งสองกราฟเหมือนกัน
+        const commonTimeScaleOptions = {
+          rightOffset: 0.5,
+          barSpacing: 0.5,
+          fixLeftEdge: false,
+          fixRightEdge: false,
+          lockVisibleTimeRangeOnResize: true,
+          rightBarStaysOnScroll: true,
+          borderVisible: true,
+          borderColor: '#ccc',
+          visible: true,
+          timeVisible: true,
+          secondsVisible: false
+        };
+
+        chart.applyOptions({
+          timeScale: commonTimeScaleOptions
+        });
+
+        volumeChart.applyOptions({
+          timeScale: {
+            ...commonTimeScaleOptions,
+            visible: false // ซ่อน time scale ในกราฟปริมาณ
+          }
+        });
+
+        function syncScroll(masterChart, slaveChart) {
+            let isSyncing = false;
+
+            masterChart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+                if (isSyncing || range === null) return;
+                isSyncing = true;
+                slaveChart.timeScale().setVisibleLogicalRange(range);
+                isSyncing = false;
+            });
+        }
+        syncScroll(chart, volumeChart);
+        syncScroll(volumeChart, chart);
+
+
+function toggleFullscreen() {
+    const appWrapper = document.getElementById('app-wrapper');
+    
+    if (!document.fullscreenElement) {
+        if (appWrapper.requestFullscreen) {
+            appWrapper.requestFullscreen();
+        } else if (appWrapper.webkitRequestFullscreen) {
+            appWrapper.webkitRequestFullscreen();
+        } else if (appWrapper.msRequestFullscreen) {
+            appWrapper.msRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+    }
+}
+
+function resizeCharts() {
+    const container = document.getElementById('chart-container');
+    if (!container) return;
+
+    const width = container.clientWidth;
+    const containerHeight = container.clientHeight;
+    
+    // ตรวจสอบว่าเป็นโหมดเต็มหน้าจอหรือไม่
+    const isFullscreen = !!document.fullscreenElement;
+    
+    // กำหนดสัดส่วนความสูง (80% ราคา, 20% ปริมาณ)
+    const priceHeight = isFullscreen 
+        ? Math.floor(containerHeight * 0.74)
+        : Math.min(400, Math.floor(containerHeight * 0.7));
+    
+    const volumeHeight = isFullscreen
+        ? Math.floor(containerHeight * 0.2)
+        : Math.min(150, Math.floor(containerHeight * 0.3));
+    
+    // ปรับขนาดกราฟ
+    chart.resize(width, priceHeight);
+    volumeChart.resize(width, volumeHeight);
+    
+    // ปรับตำแหน่ง EMA Controls
+    adjustEMAControlsPosition();
+}
+
+function adjustEMAControlsPosition() {
+    const emaControls = document.getElementById('ema-controls');
+    if (!emaControls) return;
+    
+    if (document.fullscreenElement) {
+        emaControls.style.top = '70px';
+        emaControls.style.left = '20px';
+    } else {
+        emaControls.style.top = '50px';
+        emaControls.style.left = '10px';
+    }
+}
+
+function updateFullscreenButton() {
+    const btn = document.getElementById('fullscreen-btn');
+    if (!btn) return;
+    
+    btn.innerHTML = document.fullscreenElement 
+        ? '<i class="fas fa-compress"></i> Exit Fullscreen' 
+        : '<i class="fas fa-expand"></i> Fullscreen';
+}
+
+// เรียกใช้เมื่อโหลดหน้า
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(resizeCharts, 100); // รอให้ทุกอย่างโหลดเสร็จ
+});
+
+// เรียกใช้เมื่อเปลี่ยนขนาดหน้าต่าง
+window.addEventListener('resize', () => {
+    clearTimeout(window.resizeTimer);
+    window.resizeTimer = setTimeout(resizeCharts, 200);
+});
+
+// เพิ่ม event listeners
+document.addEventListener('fullscreenchange', handleFullscreenChange);
+document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
+
+function handleFullscreenChange() {
+    resizeCharts();
+    updateFullscreenButton();
+    
+}
+
+
+</script>
+</body>
+</html>

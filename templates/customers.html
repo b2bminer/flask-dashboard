@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odoo Customer Management</title>
+</head>
+<body>
+    <input type="text" id="name" placeholder="Customer Name">
+    <input type="email" id="email" placeholder="Email">
+    <input type="text" id="phone" placeholder="Phone">
+    <button onclick="createCustomer()">Create</button>
+    <p id="createResult"></p>
+
+    <h2>Customer List</h2>
+    <button onclick="fetchCustomers()">Refresh List</button>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+            </tr>
+        </thead>
+        <tbody id="customerTable"></tbody>
+    </table>
+    
+    {% if custom_datas %}
+        <table border="1">
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>status</th>
+            </tr>
+            {% for custom_data in custom_datas %}
+            <tr>
+                <td>{{ custom_data.id }}</td>
+                <td>{{ custom_data.name }}</td>
+                <td>{{ custom_data.status }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>No custom data found.</p>
+    {% endif %}
+
+    <script>
+        const BASE_URL = "http://localhost:5000";  // Flask server URL
+
+        function showMessage(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.innerText = message;
+            element.style.color = isError ? "red" : "green";
+            setTimeout(() => { element.innerText = ""; }, 3000);
+        }
+
+        async function createCustomer() {
+            const name = document.getElementById("name").value;
+            const email = document.getElementById("email").value;
+            const phone = document.getElementById("phone").value;
+
+            const response = await fetch(`${BASE_URL}/create_customer`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, email, phone })
+            });
+            const result = await response.json();
+            showMessage("createMessage", result.error || result.message, !!result.error);
+            if (!result.error) fetchCustomers();
+            document.getElementById("createResult").innerText = result.error || result.message;
+            fetchCustomers();
+        }
+
+        async function fetchCustomers() {
+            const response = await fetch(`${BASE_URL}/get_customers`);
+            const customers = await response.json();
+
+            const table = document.getElementById("customerTable");
+            table.innerHTML = "";
+
+            customers.forEach(customer => {
+                const row = `<tr>
+                    <td>${customer.id}</td>
+                    <td>${customer.name}</td>
+                    <td>${customer.email || "N/A"}</td>
+                    <td>${customer.phone || "N/A"}</td>
+                </tr>`;
+                table.innerHTML += row;
+            });
+        }
+
+        fetchCustomers();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask & Odoo</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        /* Dark theme styles */
+        :root {
+            --dark-bg: #121212;
+            --dark-card: #1e1e1e;
+            --dark-text: #e0e0e0;
+            --dark-border: #333333;
+            --dark-hover: #2d2d2d;
+            --dark-primary: #bb86fc;
+            --dark-success: #03dac6;
+            --dark-info: #3700b3;
+            --dark-warning: #cf6679;
+        }
+        
+        body {
+            background-color: var(--dark-bg);
+            color: var(--dark-text);
+        }
+    </style>
+</head>
+<body class="dark-theme">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand animate__animated animate__slideInLeft" href="/">Flask & Odoo</a>
+        </div>
+    </nav>
+    <a href="/signup">Sign Up</a>
+    <a href="/customers">Customer</a>
+    <a href="/vendor">Vendor</a>
+    <a href="/employee">Employee</a>
+    <a href="/portfolio">Portfolio</a>
+    <a href="/supabase">Supabase</a>
+    <a href="/css">CSS</a>
+    <a href="/test">Test</a>
+
+    <!-- ✅ Submitted Data -->
+    <h3 class="mt-5">Submitted Data</h3>
+    <ul id="submitted-data" class="list-group">
+        {% for item in data %}
+            <li class="list-group-item">{{ item.name }} - {{ item.email }} - {{ item.message }}</li>
+        {% endfor %}
+    </ul>
+
+    {% if system_info %}
+    <div class="alert alert-danger mt-3">
+        <h1>Odoo System Info</h1>
+        <table>
+            <tr>
+                <th>Property</th>
+                <th>Value</th>
+            </tr>
+            {% for key, value in system_info.items() %}
+            <tr>
+                <td>{{ key }}</td>
+                <td>{{ value }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+    <h1>Odoo System Info2</h1>
+    {% if system_info2 %}
+    {% if system_info2.error %}
+        <p style="color: red;">Error: {{ system_info2.error }}</p>
+    {% else %}
+        <table>
+            <tr><th>Property</th><th>Value</th></tr>
+            <tr><td>Odoo Version</td><td>{{ system_info2.result.server_version }}</td></tr>
+            <tr><td>Database Name</td><td>{{ system_info2.result.db }}</td></tr>
+            <tr><td>Admin Username</td><td>{{ system_info2.result.username }}</td></tr>
+        </table>
+        <table>
+            <tr>
+                <th>Property</th>
+                <th>Value</th>
+            </tr>
+            {% for key, value in system_info2.items() %}
+            <tr>
+                <td>{{ key }}</td>
+                <td>{{ value }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+    {% endif %}
+
+    <div class="container text-center mt-5">
+        <div class="card shadow p-4 animate__animated animate__fadeInUp">
+            <h1 class="text-primary animate__animated animate__fadeInDown">Welcome to Flask & Odoo Integration!</h1>
+            <p class="lead animate__animated animate__fadeInUp">Flask is running inside a Docker container and connected to Odoo.</p>
+
+            <!-- ✅ Odoo API Status Indicator -->
+            <h5>Odoo API Status: <span id="odoo-status" class="badge bg-secondary">Checking...</span></h5>
+
+            <!-- ✅ Button to Trigger Modal -->
+            <button type="button" class="btn btn-primary btn-lg animate__animated animate__zoomIn" data-bs-toggle="modal" data-bs-target="#infoModal">
+                Learn More!!!
+            </button>
+        </div>
+    </div>
+
+    <!-- ✅ Bootstrap Modal -->
+    <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">About Flask & Odoo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    This project demonstrates how to integrate Flask with Odoo using Docker. 
+                    The backend is powered by Python Flask, while Odoo handles ERP functionalities.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS (Required for Modal) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- ✅ JavaScript to Fetch Odoo API Status -->
+    <script>
+        function checkOdooStatus() {
+            fetch("/odoo_status")
+                .then(response => response.json())
+                .then(data => {
+                    const statusElement = document.getElementById("odoo-status");
+
+                    // Check connection status
+                    if (data.result.db === "odoo") {
+                        statusElement.classList.remove("bg-secondary", "bg-danger");
+                        statusElement.classList.add("bg-success");
+                    } else {
+                        statusElement.classList.remove("bg-secondary", "bg-success");
+                        statusElement.classList.add("bg-danger");
+                    }
+                    // Convert JSON data to an HTML list
+                    let content = `<p><strong>Status:</strong> ${data.result.db === "odoo" ? "Connected" : "Disconnected"}</p>`;
+                    content += formatJSONToHTML(data.result);
+                    statusElement.innerHTML = content;
+
+                })
+                .catch(error => {
+                    console.error("Error fetching Odoo status:", error);
+                    const statusElement = document.getElementById("odoo-status");
+                    statusElement.classList.remove("bg-success", "bg-secondary");
+                    statusElement.classList.add("bg-danger");
+                    statusElement.innerHTML = `<p><strong>Error:</strong> Unable to fetch Odoo status</p>`;
+                });
+        }
+
+        function formatJSONToHTML(data) {
+            let html = "<ul>";
+            for (const [key, value] of Object.entries(data)) {
+                if (typeof value === "object" && value !== null) {
+                    // If value is an object or array, recursively format it
+                    html += `<li><strong>${key}:</strong> ${Array.isArray(value) ? "[Array]" : "[Object]"}
+                            <ul>${formatJSONToHTML(value)}</ul></li>`;
+                } else {
+                    // Display normal key-value pairs
+                    html += `<li><strong>${key}:</strong> ${value}</li>`;
+                }
+            }
+            html += "</ul>";
+            return html;
+        }
+        // ✅ Check Odoo status every 5 seconds
+        //setInterval(checkOdooStatus, 5000);
+        //checkOdooStatus();  // Initial check
+    </script>
+
+</body>
+</html>
